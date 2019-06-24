@@ -6,97 +6,23 @@ import random
 import os
 import pickle as pkl
 
-# INPUT PARAMETERS
-# Only One or many provenance files
-onlyOneFile = False
-# Is it k-fold Generated?
-kFoldGenerated = False
-kFoldNumber = 10
-# Extra edges are included?
-includeExtraEdges = False
-# Negative edges are included?
-includeNegativeEdges = False
+from config.exp_config import *
+from config.smokesquad_config import *
 
-# Exclude last provenance file loaded from folds? (For tests in which accuracy is 100%)
-leaveOneGraphOutOfTraining = False
-
-# Provenance graph file name
-inputfile = "output 08.xml"
-
-# Provenance graph files name separated by ,
-input_prefix = "/home/sidneymelo/prov2sage/DataSets/PhysicsCar_final/no_indirect_edge_graph/"
-#inputfiles = ["P1-S1.xml","P1-S2.xml", "P1-S3.xml", "P2-S1.xml", "P2-S2.xml", "P2-S3.xml", "P3-S1.xml", "P3-S2.xml", "P3-S3.xml", "P4-S1.xml"]
-inputfiles = []
-
-# Extra edge files
-extraedgesfiles = ['e01.txt','e02.txt','e03.txt']
-
-# Negative edge files
-negativeedgefiles = ['negative-e01.txt','negative-e02.txt','negative-e03.txt']
-
-# Prefix for all output files which will be generated
-output_prefix = "prov"
-output_folder = "ac_final_test/"
-
-# Ratio of training, test and validation sets
-train_ratio = 0.7
-test_ratio = 0.2
-valid_ratio = 0.1
-
-# Attributes for nodes regarding train\test\validation graphs
-train_dict = {"test": False, "val": False}
-test_dict = {"test": True, "val": False}
-valid_dict = {"test": False, "val": True}
-
-# Attributes for edges regarding train\test\validation graphs
-train_edge_dict = {"test_removed": False, "train_removed": False}
-test_edge_dict = {"test_removed": True, "train_removed": True}
-valid_edge_dict = {"test_removed": False, "train_removed": True}
-
-# Is the graph directed?
-directed = False
-
-# Attributes for GAT
-train_nodes_per_class = 10
-gat_test_ratio = 0.4
-gat_valid_ratio = 0.2
 
 random.seed()
 
-# ATTRIBUTES SHOULD BE WRITTEN IN NODE JSON
-attrib_written_in_node = False
+if (len(attrib_name_list) != len(attrib_type_list)):
+    print("Attributes name and type list are not the same size.")
+    print(len(attrib_name_list))
+    print(len(attrib_type_list))
+    print([x for x in zip(attrib_name_list,attrib_type_list)])
 
-"""
-LIST OF THE ATTRIBUTES YOU WANT TO EXTRACT FROM THE ATTRIBUTE
-NODE OF EACH VERTEX ON A PROVENANCE GRAPH XML. ONE OF THESE ATTRIBUTES MIGHT BE
-OUR LABEL!
-"""
-""" MORPHWING
-attrib_name_list = ['ObjectPosition_X', 'ObjectPosition_Y', 'Speed', 'HP', 'LocalTime' ]
-attrib_type_list = ['numeric', 'numeric', 'numeric', 'numeric', 'numeric']
-attrib_default_value_list = [0, 0, 0, 999, 0]
-"""
-
-""" CAR TUTORIAL """
-attrib_name_list = ['Throttle','Speed', 'CurrentGear','CurrentEnginePower','TurnRate','CarMass','VelocityVector_X',
-'VelocityVector_Y','VelocityVector_Z','AngularVelocity_X','AngularVelocity_Y','AngularVelocity_Z','DragVector_X', 'DragVector_Y',
-'DragVector_Z','ObjectPosition_X', 'ObjectPosition_Y', 'ObjectPosition_Z']
-attrib_type_list = ['numeric', 'numeric', 'numeric', 'numeric', 'numeric', 'numeric', 'numeric', 'numeric', 'numeric', 
-'numeric', 'numeric','numeric', 'numeric', 'numeric', 'numeric', 'numeric', 'numeric', 'numeric']
-attrib_default_value_list = [1, 0, 0, 0, 0, 1500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-tag_name_list = ['label','type']
-tag_type_list = ['categoric','categoric']
-tag_default_value_list = ['inexistent','inexistent']
-
-label_attrib_name = 'type'
-""" Label Conditions is a dictionary that determines conditions for a node to
-become a label node. For example, if we want test and validations sets to contain
-only nodes with given attributes or tags values."""
-label_conditions = {'type': 'Activity', 'ObjectName': 'Player'}
-
-categoric_att_dict = {}
-sup_dict = {}
+if (len(attrib_name_list) != len(attrib_default_value_list)):
+    print("Attributes name and type list are not the same size.")
+    print(len(attrib_name_list))
+    print(len(attrib_default_value_list))
+    print([x for x in zip(attrib_name_list,attrib_default_value_list)])
 
 """METHODS """
 # Returns Graph file with integer id nodes
@@ -214,12 +140,16 @@ def populateCategoricDictionaries(root,cat_attrib_list):
         attributes = vertex.find("attributes")
         # iterates over the list of wanted attributes
         for cat_attrib in cat_attrib_list:
+            #Skip if it tries to search for a provenance tag
+            if cat_attrib in tag_name_list:
+                continue
             # Find attribute node for a given attribute name
             attrib_node = findAttributeNodeWithName(attributes, cat_attrib)
             if (attrib_node == None):
-                continue
-            # Get the value of the attribute node for a given attribute name
-            current_node_atb_value = attrib_node.find('value').text
+                current_node_atb_value = attrib_default_value_list[attrib_name_list.index(cat_attrib)]
+            else:
+                # Get the value of the attribute node for a given attribute name
+                current_node_atb_value = attrib_node.find('value').text
             # Adds the value to the dictionary if it's not there yet
             if (current_node_atb_value not in sup_dict[cat_attrib]):
                 sup_dict[cat_attrib].append(current_node_atb_value)

@@ -90,6 +90,18 @@ def setVertexIntID(node, id):
     prefix = node.find("ID").text.split("_")[0]
     node.find("ID").text = prefix+"_"+str(id)
 
+""" Given an edge, returns its sourceID (only the number) """
+def getEdgeSourceID(edge):
+    return int(edge.find("sourceID").text.split("_")[-1])
+
+""" Given an edge, returns its targetID (only the number) """
+def getEdgeTargetID(edge):
+    return int(edge.find("targetID").text.split("_")[-1])
+
+""" Given an edge, returns both its sourceID and targetID (number only) """
+def getEdgeSourceAndTargetIDs(edge):
+    return getEdgeSourceID(edge), getEdgeTargetID(edge)
+
 """ Merge two edge label dictionaries, putting everything of b in a and then returning a """
 def mergeEdgeLabelDictionaries(a, b):
     for key,value in b.items():
@@ -114,6 +126,14 @@ def sumEdgeCountDictionaries(a,b):
                     a[source][target] = a[source][target]+count
     return a
 
+""" Sums two edge type dictionaries"""
+def sumEdgeTypeDictionaries(a,b):
+    for edge_type,v in b.items():
+        if edge_type not in a:
+            a[edge_type] = v
+        else:
+            a[edge_type] = a[edge_type]+v
+    return a
 
 """ increments edge type counter in a edge type dictionary """
 def incrementEdgeTypeInDictionary(d, source, target):

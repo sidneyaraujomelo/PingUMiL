@@ -11,7 +11,14 @@ def createNegativeExamples(root, origin, positiveExamples, types, search_window)
     listOfSetEdges = []
     listOfAllNegativeExamples = []
     dictOfEdgesCount = {}
-    all_possible_targetLabels = list(types.keys())
+    if isinstance(types,dict):
+        all_possible_targetLabels = list(types.keys())
+    elif isinstance(types,str):
+        all_possible_targetLabels = [types.split("->")[0]]
+        types = { types.split("->")[0] : types.split("->")[1]}
+    else:
+        print("This edge type is not supported")
+        return
     vertexes = root.find("vertices").findall("vertex")
     for i in range(len(vertexes)):
         cur_v_label = vertexes[i].find("label").text
@@ -43,34 +50,35 @@ def createNegativeExamples(root, origin, positiveExamples, types, search_window)
 
     return listOfAllNegativeExamples, dictOfEdgesCount, listOfSetEdges, dictOfEdgesCount
 
-def removeIndirectEdges(root, origin):
+def removeEdgesByType(root, origin, target_edge_type):
     listOfSetEdges = []
-    listOfIndirectEdgesIds = []
-    dictOfLabelSequences = {}
+    listOfTargetEdgesIds = []
+    dictOfEdgeTypes = {}
     dictOfEdgesCount = {}
     elementsToRemove = []
     first_vertex = getVertexIntID(root.find("vertices").find("vertex"))
     for element in root:
         if (element.tag == "edges"):
             for edgeElement in element:
-                sourceID = int(edgeElement.find("sourceID").text.split("_")[-1])
-                targetID = int(edgeElement.find("targetID").text.split("_")[-1])
-                if (abs(sourceID-targetID) > 1 and sourceID != first_vertex and targetID != first_vertex):
+                sourceID, targetID = getEdgeSourceAndTargetIDs(edgeElement)
+                sourceVertex = getVertexByID(root,"vertex_{}".format(sourceID))
+                targetVertex = getVertexByID(root,"vertex_{}".format(targetID))
+                targetLabel = getTextFromNode(targetVertex, "label")
+                sourceLabel = getTextFromNode(sourceVertex, "label")
+
+                edgeType = "{}->{}".format(targetLabel, sourceLabel)
+                if (edgeType == target_edge_type):
                     #print("{} {} {}".format(sourceID, targetID, abs(sourceID-targetID)))
-                    listOfIndirectEdgesIds.append([sourceID, targetID])
+                    listOfTargetEdgesIds.append([sourceID, targetID])
                     elementsToRemove.append(edgeElement)
                     #element.remove(edgeElement)
-                    sourceVertex = getVertexByID(root,"vertex_{}".format(sourceID))
-                    targetVertex = getVertexByID(root,"vertex_{}".format(targetID))
-                    targetLabel = getTextFromNode(targetVertex, "label")
-                    sourceLabel = getTextFromNode(sourceVertex, "label")
-
+                    
                     listOfSetEdges.append(SetEdge(origin, sourceID, targetID, sourceLabel, targetLabel))
 
-                    if (targetLabel not in dictOfLabelSequences):
-                        dictOfLabelSequences[targetLabel] = [sourceLabel]
-                    elif (sourceLabel not in dictOfLabelSequences[targetLabel]):
-                        dictOfLabelSequences[targetLabel].append(sourceLabel)
+                    if (targetLabel not in dictOfEdgeTypes):
+                        dictOfEdgeTypes[targetLabel] = [sourceLabel]
+                    elif (sourceLabel not in dictOfEdgeTypes[targetLabel]):
+                        dictOfEdgeTypes[targetLabel].append(sourceLabel)
 
                     if (targetLabel not in dictOfEdgesCount):
                         dictOfEdgesCount[targetLabel] = {sourceLabel: 1}
@@ -84,68 +92,149 @@ def removeIndirectEdges(root, origin):
     for edgeElement in elementsToRemove:
         element.remove(edgeElement)
 
-    print("Numero de arestas removidas: {} \nConjunto de arestas:\n{}".format(len(listOfIndirectEdgesIds),listOfIndirectEdgesIds))
-    print("Lista de Sequencias de labels de arestas removidas: {}".format(dictOfLabelSequences))
+    print("Numero de arestas removidas: {} \nConjunto de arestas:\n{}".format(len(listOfTargetEdgesIds),listOfTargetEdgesIds))
+    print("Lista de Sequencias de labels de arestas removidas: {}".format(dictOfEdgeTypes))
     print("Contagem de nós: {}".format(dictOfEdgesCount))
-    return listOfIndirectEdgesIds, dictOfLabelSequences, listOfSetEdges, dictOfEdgesCount
+    return listOfTargetEdgesIds, dictOfEdgeTypes, listOfSetEdges, dictOfEdgesCount
+
+def removeIndirectEdges(root, origin):
+    listOfSetEdges = []
+    listOfTargetEdgesIds = []
+    dictOfEdgeTypes = {}
+    dictOfEdgesCount = {}
+    elementsToRemove = []
+    first_vertex = getVertexIntID(root.find("vertices").find("vertex"))
+    for element in root:
+        if (element.tag == "edges"):
+            for edgeElement in element:
+                sourceID, targetID = getEdgeSourceAndTargetIDs(edgeElement)
+                if (abs(sourceID-targetID) > 1 and sourceID != first_vertex and targetID != first_vertex):
+                    #print("{} {} {}".format(sourceID, targetID, abs(sourceID-targetID)))
+                    listOfTargetEdgesIds.append([sourceID, targetID])
+                    elementsToRemove.append(edgeElement)
+                    #element.remove(edgeElement)
+                    sourceVertex = getVertexByID(root,"vertex_{}".format(sourceID))
+                    targetVertex = getVertexByID(root,"vertex_{}".format(targetID))
+                    targetLabel = getTextFromNode(targetVertex, "label")
+                    sourceLabel = getTextFromNode(sourceVertex, "label")
+
+                    listOfSetEdges.append(SetEdge(origin, sourceID, targetID, sourceLabel, targetLabel))
+
+                    if (targetLabel not in dictOfEdgeTypes):
+                        dictOfEdgeTypes[targetLabel] = [sourceLabel]
+                    elif (sourceLabel not in dictOfEdgeTypes[targetLabel]):
+                        dictOfEdgeTypes[targetLabel].append(sourceLabel)
+
+                    if (targetLabel not in dictOfEdgesCount):
+                        dictOfEdgesCount[targetLabel] = {sourceLabel: 1}
+                    elif (sourceLabel not in dictOfEdgesCount[targetLabel]):
+                        dictOfEdgesCount[targetLabel][sourceLabel] = 1
+                    else:
+                        dictOfEdgesCount[targetLabel][sourceLabel] = dictOfEdgesCount[targetLabel][sourceLabel] + 1
+
+    #De fato remover as arestas
+    element = root.find("edges")
+    for edgeElement in elementsToRemove:
+        element.remove(edgeElement)
+
+    print("Numero de arestas removidas: {} \nConjunto de arestas:\n{}".format(len(listOfTargetEdgesIds),listOfTargetEdgesIds))
+    print("Lista de Sequencias de labels de arestas removidas: {}".format(dictOfEdgeTypes))
+    print("Contagem de nós: {}".format(dictOfEdgesCount))
+    return listOfTargetEdgesIds, dictOfEdgeTypes, listOfSetEdges, dictOfEdgesCount
 
 def main():
     parser = ArgumentParser("Remove edges on Provenance data.")
     parser.add_argument("path", help="Path to files")
-    parser.add_argument("input_filename", help="Input graph file.")
-    parser.add_argument("output_filename", help="Output graph file.")
-    parser.add_argument("removed_edges_filename", help="List of removed edges filename")
-    parser.add_argument("mode_preprocess", help="None | Indirect")
-    parser.add_argument("negative_samples", help="False | True")
+    parser.add_argument("mode_preprocess", help="None | Indirect | EdgeType", default="None")
+    parser.add_argument("--negative_samples", help="False | True", default="True")
+    parser.add_argument("--edge_type", help="if mode_process == EdgeType, this argument must be an EdgeType such as Flying->Landing")
+    parser.add_argument("--output_path", help="Path to the output file")
+    parser.add_argument("--input_filename", help="Input graph file if path contains a directory.")
+    parser.add_argument("--output_filename_prefix", help="A prefix to the name of the output graph file.")
     args = parser.parse_args()
-
-    path = args.path
-    input_fn = args.input_filename
-    output_fn = args.output_filename
-    removedEdges_fn = args.removed_edges_filename
+    print(args)
     mode = args.mode_preprocess
     negative_samples = args.negative_samples == "True"
+    edge_type = args.edge_type
+    if os.path.isfile(args.path):
+        path = os.path.dirname(args.path)
+        input_fns = [os.path.basename(path)]
+    else:
+        path = args.path
+        if args.input_filename:
+            input_fns = [args.input_filename]
+        else:
+            input_fns = [x for x in os.listdir(path) if x.endswith(".xml")]
 
-    file_removedEdges = open(path+"/"+removedEdges_fn, "w+")
-    if (file_removedEdges == None):
-        print("Incapable of creating and loading Removed Edges File")
-        return
+    output_path = args.output_path if args.output_path != None else path
+    output_fns = ["{}_{}".format(args.output_filename_prefix, x) for x in input_fns]
+    createPath(output_path)
 
-    if (negative_samples):
-        file_negativeEdges = open(path+"/negative-"+removedEdges_fn, "w+")
-        if (file_negativeEdges == None):
-            print("Incapable of creating and loading Negative Edges File")
+    for i,input_fn in enumerate(input_fns):
+        output_fn = output_fns[i]
+        removedEdges_fn = ".".join(output_fn.split(".")[:-1])+".txt"
+
+        file_removedEdges = open(output_path+"/"+removedEdges_fn, "w+")
+        if (file_removedEdges == None):
+            print("Incapable of creating and loading Removed Edges File")
             return
 
-    tree = ET.parse(path+"/"+input_fn)
-    root = tree.getroot()
-    print("Numero de arestas do grafo: {}".format(getNumberOfEdges(root)))
-
-    if (mode == "Indirect"):
-        removedEdgesIds, removedEdgesTypes = removeIndirectEdges(root, input_fn)
-        for removedEdge in removedEdgesIds:
-            file_removedEdges.write("{} {}\n".format(removedEdge[0], removedEdge[1]))
-        tree.write(path+"/"+output_fn)
-
         if (negative_samples):
-            negativeEdgesExamplesId = createNegativeExamples(root, input_fn, removedEdgesIds, removedEdgesTypes, 5)
+            file_negativeEdges = open(output_path+"/negative-"+removedEdges_fn, "w+")
+            if (file_negativeEdges == None):
+                print("Incapable of creating and loading Negative Edges File")
+                return
 
-            negativeEdgesSet = []
-            if (len(negativeEdgesExamplesId) < len(removedEdgesIds)):
-                negativeEdgesSet = negativeEdgesExamplesId
-            else:
-                while (len(negativeEdgesSet) < len(removedEdgesIds)):
-                    c = choice(negativeEdgesExamplesId)
-                    if (c not in negativeEdgesSet):
-                        negativeEdgesSet.append(c)
+        tree = ET.parse(path+"/"+input_fn)
+        root = tree.getroot()
+        print("Numero de arestas do grafo: {}".format(getNumberOfEdges(root)))
 
-            print("Conjunto de arestas negativas geradas aleatoriamente: {}".format(negativeEdgesSet))
+        if (mode == "Indirect"):
+            removedEdgesIds, removedEdgesTypes = removeIndirectEdges(root, input_fn)
+            for removedEdge in removedEdgesIds:
+                file_removedEdges.write("{} {}\n".format(removedEdge[0], removedEdge[1]))
+            tree.write(output_path+"/"+output_fn)
 
-            for negativeEdge in negativeEdgesSet:
-                file_negativeEdges.write("{} {}\n".format(negativeEdge[0], negativeEdge[1]))
+            if (negative_samples):
+                negativeEdgesExamplesId = createNegativeExamples(root, input_fn, removedEdgesIds, removedEdgesTypes, 5)
 
+                negativeEdgesSet = []
+                if (len(negativeEdgesExamplesId) < len(removedEdgesIds)):
+                    negativeEdgesSet = negativeEdgesExamplesId
+                else:
+                    while (len(negativeEdgesSet) < len(removedEdgesIds)):
+                        c = choice(negativeEdgesExamplesId)
+                        if (c not in negativeEdgesSet):
+                            negativeEdgesSet.append(c)
 
-    file_removedEdges.close()
+                print("Conjunto de arestas negativas geradas aleatoriamente: {}".format(negativeEdgesSet))
+
+                for negativeEdge in negativeEdgesSet:
+                    file_negativeEdges.write("{} {}\n".format(negativeEdge[0], negativeEdge[1]))
+        elif (mode == "EdgeType"):
+            removedEdgesIds,_ = removeEdgesByType(root, input_fn, edge_type)
+            for removedEdge in removedEdgesIds:
+                file_removedEdges.write("{} {}\n".format(removedEdge[0], removedEdge[1]))
+            tree.write(os.path.join(output_path, output_fn))
+
+            if (negative_samples):
+                negativeEdgesExamplesId,_,_,_ = createNegativeExamples(root, input_fn, removedEdgesIds, edge_type, 10)
+
+                negativeEdgesSet = []
+                if (len(negativeEdgesExamplesId) < len(removedEdgesIds)):
+                    negativeEdgesSet = negativeEdgesExamplesId
+                else:
+                    while (len(negativeEdgesSet) < len(removedEdgesIds)):
+                        c = choice(negativeEdgesExamplesId)
+                        if (c not in negativeEdgesSet):
+                            negativeEdgesSet.append(c)
+
+                print("Conjunto de arestas negativas geradas aleatoriamente: {}".format(negativeEdgesSet))
+
+                for negativeEdge in negativeEdgesSet:
+                    file_negativeEdges.write("{} {}\n".format(negativeEdge[0], negativeEdge[1]))
+
+        file_removedEdges.close()
 
 if __name__=='__main__':
     main()

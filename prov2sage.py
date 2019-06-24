@@ -14,6 +14,7 @@ def writeAttributeToGraph(G, node_id, attrib_name, attrib_val):
         G.node[node_id][attrib_name] = attrib_val
 
 def parseXML2nx(e, G, currentIdCount=0, currentXml=1, numXmls=1):
+    print(currentIdCount)
     for element in e:
         """ TAG VERTICES """
         if (element.tag == "vertices"):
@@ -62,7 +63,7 @@ def parseXML2nx(e, G, currentIdCount=0, currentXml=1, numXmls=1):
                         continue
                     if (tag_type_list[idx] == 'numeric'):
                         if (tag_name in tag_val_dict):
-                            features.append(float(tag_val_dict[tag_name]))
+                            features.append(float(tag_val_dict[tag_name].replace(',','.')))
                             writeAttributeToGraph(G, node_id_int, tag_name, tag_val_dict[tag_name])
                         else:
                             features.append(tag_default_value_list[idx])
@@ -82,14 +83,20 @@ def parseXML2nx(e, G, currentIdCount=0, currentXml=1, numXmls=1):
                         continue
                     if (attrib_type_list[idx] == 'numeric'):
                         if (attrib_name in attrib_val_dict):
-                            features.append(float(attrib_val_dict[attrib_name]))
+                            features.append(float(attrib_val_dict[attrib_name].replace(',','.')))
                             writeAttributeToGraph(G, node_id_int, attrib_name, attrib_val_dict[attrib_name])
                         else:
                             features.append(attrib_default_value_list[idx])
                             writeAttributeToGraph(G, node_id_int, attrib_name, attrib_default_value_list[idx])
                     elif (attrib_type_list[idx] == 'categoric'):
-                        onehotvectorrep = getOneHotVectorForAttribute(attrib_name, attrib_val_dict[attrib_name])
-                        writeAttributeToGraph(G, node_id_int, attrib_name, attrib_val_dict[attrib_name])
+                        onehotvectorrep = []
+                        if attrib_name in attrib_val_dict:
+                            onehotvectorrep = getOneHotVectorForAttribute(attrib_name, attrib_val_dict[attrib_name])
+                            writeAttributeToGraph(G, node_id_int, attrib_name, attrib_val_dict[attrib_name])
+                        else:
+                            #print(attrib_default_value_list)
+                            onehotvectorrep = getOneHotVectorForAttribute(attrib_name, attrib_default_value_list[idx])
+                            writeAttributeToGraph(G, node_id_int, attrib_name, attrib_default_value_list[idx])
                         for x in onehotvectorrep:
                             features.append(float(x))
                             # print(features)
@@ -127,17 +134,6 @@ def parseXML2nx(e, G, currentIdCount=0, currentXml=1, numXmls=1):
 def prov2nx(e, G):
     parseXML2nx(e,G,0,1,1)    
 
-def provList2nx(xmls, G):
-    currentIdCount = 0
-
-    currentXml = 1
-    numXmls = len(xmls)
-
-    for e in xmls:
-        currentIdCount = len(idmap)
-        parseXML2nx(e,G,currentIdCount, currentXml, numXmls)
-        currentXml = currentXml+1  
-
 def edgesFileToList(edgefile, currentIdCount):
     edgesValues = []
     for line in edgefile:
@@ -152,50 +148,50 @@ def writeNewEdgeFileToList(edgesValues, output_filename):
         output.write("{} {}\n".format(edges[0], edges[1]))
     output.close() 
 
-def provList2nx(xmls, G, extraedges):
-    currentIdCount = 0
-    edgesValues = []
-
-    currentXml = 1
-    numXmls = len(xmls)
-
-    for e in xmls:
-        currentIdCount = len(idmap)
-        #edgesOfCurrentGraph = []
-        print("{} {}".format(currentIdCount,extraedges[currentXml-1]))
-        edgesValues = edgesValues+edgesFileToList(extraedges[currentXml-1], currentIdCount)
-        parseXML2nx(e,G,currentIdCount, currentXml, numXmls)
-        currentXml = currentXml+1
-
-    #Write new edgeValues
-    writeNewEdgeFileToList(edgesValues, "extra_edges.txt")
-
 def provList2nx(xmls, G, extraedges=None, negativeedges=None):
     currentIdCount = 0
+    currentXml = 1
+    numXmls = len(xmls)
     edgesValues = []
     negativeEdgesValues = []
 
-    currentXml = 1
-    numXmls = len(xmls)
+    if (extraedges == None and negativeedges == None):
+        for e in xmls:
+            currentIdCount = len(idmap)
+            print(currentIdCount)
+            parseXML2nx(e,G,currentIdCount, currentXml, numXmls)
+            currentXml = currentXml+1  
+    elif (extraedges != None and negativeedges == None):
+        for e in xmls:
+            currentIdCount = len(idmap)
+            #edgesOfCurrentGraph = []
+            print("{} {}".format(currentIdCount,extraedges[currentXml-1]))
+            edgesValues = edgesValues+edgesFileToList(extraedges[currentXml-1], currentIdCount)
+            parseXML2nx(e,G,currentIdCount, currentXml, numXmls)
+            currentXml = currentXml+1
 
-    for e in xmls:
-        currentIdCount = 0
-        #edgesOfCurrentGraph = []
-        #print("{} {}".format(currentIdCount,extraedges[currentXml-1]))
+        #Write new edgeValues
+        writeNewEdgeFileToList(edgesValues, "extra_edges.txt")   
+    elif (extraedges != None and negativeedges != None):
+        for e in xmls:
+            currentIdCount = 0
+            #edgesOfCurrentGraph = []
+            #print("{} {}".format(currentIdCount,extraedges[currentXml-1]))
+            if (includeExtraEdges):
+                edgesValues = edgesValues+edgesFileToList(extraedges[currentXml-1], currentIdCount)
+            if (includeNegativeEdges):
+                negativeEdgesValues = negativeEdgesValues+edgesFileToList(negativeedges[currentXml-1], currentIdCount)
+            parseXML2nx(e,G,currentIdCount, currentXml, numXmls)
+            currentXml = currentXml+1
+
+        #Write new edgeValues 
         if (includeExtraEdges):
-        	edgesValues = edgesValues+edgesFileToList(extraedges[currentXml-1], currentIdCount)
+            writeNewEdgeFileToList(edgesValues, "extra_edges.txt")
+
+        #Write new negativeEdgeValues
         if (includeNegativeEdges):
-        	negativeEdgesValues = negativeEdgesValues+edgesFileToList(negativeedges[currentXml-1], currentIdCount)
-        parseXML2nx(e,G,currentIdCount, currentXml, numXmls)
-        currentXml = currentXml+1
+            writeNewEdgeFileToList(negativeEdgesValues, "negative_edges.txt")        
 
-    #Write new edgeValues 
-    if (includeExtraEdges):
-    	writeNewEdgeFileToList(edgesValues, "extra_edges.txt")
-
-    #Write new negativeEdgeValues
-    if (includeNegativeEdges):
-    	writeNewEdgeFileToList(negativeEdgesValues, "negative_edges.txt")
 
 def outputJsonGraphFiles(G, a):
     # Write output json Graph

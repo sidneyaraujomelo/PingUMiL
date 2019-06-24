@@ -39,10 +39,11 @@ def main():
     parser = ArgumentParser("Balance datasets of Provenance data.")
     parser.add_argument("path", help="Path to files")
     parser.add_argument("k", help="Number of folds")
-    parser.add_argument("--input_filename", help="Input graph file.")
     parser.add_argument("--output_folder", help="Output folder for edge sets.")
+    parser.add_argument("--edge_type", help="Set if remove edges by edge type mode.")
     args = parser.parse_args()
     k = int(args.k)
+    edge_type = args.edge_type
 
     print("XML files: ")
     graphRoots, input_filenames =  loadProvenanceXMLList(args.path, inputfiles)
@@ -57,12 +58,15 @@ def main():
 
     for idx, root in enumerate(graphRoots):
         print("Number of edges: {}".format(getNumberOfEdges(root)))
-        print("Removal of indirect edges:")
-        removedEdgesIds, removedEdgesTypes, setEdges, removedEdgesCount = edgeremover.removeIndirectEdges(root, idx)
+        print("Removal of target edges:")
+        if edge_type:
+            removedEdgesIds, removedEdgesTypes, setEdges, removedEdgesCount = edgeremover.removeEdgesByType(root, idx, edge_type)
+        else:
+            removedEdgesIds, removedEdgesTypes, setEdges, removedEdgesCount = edgeremover.removeIndirectEdges(root, idx)
         tree = ET.ElementTree()
         tree._setroot(root)
-        createPath(args.path+args.output_folder+"no_indirect_edge_graph/")
-        tree.write(args.path+args.output_folder+"no_indirect_edge_graph/r-"+input_filenames[idx])
+        createPath(args.path+args.output_folder+"no_target_edge_graph/")
+        tree.write(args.path+args.output_folder+"no_target_edge_graph/r-"+input_filenames[idx])
         allRemovedEdges = allRemovedEdges+setEdges
         allRemovedEdgesIds = allRemovedEdgesIds+removedEdgesIds
         allRemovedEdgesTypes = mergeEdgeLabelDictionaries(allRemovedEdgesTypes, removedEdgesTypes)
@@ -71,7 +75,10 @@ def main():
 
     for idx,root in enumerate(graphRoots):
         print("Creation of negative examples")
-        negativeEdgesExamplesId, negativeEdgesTypes, setNegativeEdges, negativeEdgesCount = edgeremover.createNegativeExamples(root, idx, allRemovedEdgesIds, allRemovedEdgesTypes, 10)
+        if edge_type:
+            negativeEdgesExamplesId, negativeEdgesTypes, setNegativeEdges, negativeEdgesCount = edgeremover.createNegativeExamples(root, idx, allRemovedEdgesIds, edge_type, 10)
+        else:
+            negativeEdgesExamplesId, negativeEdgesTypes, setNegativeEdges, negativeEdgesCount = edgeremover.createNegativeExamples(root, idx, allRemovedEdgesIds, allRemovedEdgesTypes, 10)
         allNegativeEdgesCount = sumEdgeCountDictionaries(allNegativeEdgesCount, negativeEdgesCount)
         allNegativeExampleEdges = allNegativeExampleEdges+setNegativeEdges
         print("\n")
@@ -84,6 +91,8 @@ def main():
     selectedNegativeExamples = []
     selectedPositiveExamples = []
     selectedExamplesCount = {}
+    """skipEdges is used to prevent the algorithm to search edges already depleted from negative 
+    edges pool"""
     skipEdges = {}
     for edge in allRemovedEdges:
         if (edge.label_source in skipEdges):
@@ -104,7 +113,7 @@ def main():
             elif edge.label_target not in skipEdges[edge.label_source]:
                 skipEdges[edge.label_source].append(edge.label_target)
 
-    print("Number of indirect edges > positive: {} and negative: {}  ".format(len(selectedPositiveExamples),len(selectedNegativeExamples)))
+    print("Number of target edges > positive: {} and negative: {}  ".format(len(selectedPositiveExamples),len(selectedNegativeExamples)))
     """for i in range(len(selectedPositiveExamples)):
         print("{} {} {}".format(i, selectedPositiveExamples[i], selectedNegativeExamples[i]))"""
     print(selectedExamplesCount)
