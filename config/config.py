@@ -48,6 +48,20 @@ def get_output_class_map_filename(output_suffix=None):
         return output_folder + token + "/" + token + "-class_map.json"
     return output_folder + token + "-class_map.json"
 
+# Returns the name of the file that will contain the List of attribute sets
+def get_output_atbset_list_filename(output_suffix=None):
+    token = output_prefix + (output_suffix if output_suffix else "")
+    if kFoldGenerated:
+        return output_folder + token + "/" + token + "-atbset_list.json"
+    return output_folder + token + "-atbset_list.json"
+
+# Returns the name of the file that will list the respective node id for each
+# line in a given attribute set matrix (featmap).
+def get_output_atbset_map_filename(output_suffix=None):
+    token = output_prefix + (output_suffix if output_suffix else "")
+    if kFoldGenerated:
+        return output_folder + token + "/" + token + "-map.json"
+    return output_folder + token + "-map.json"
 
 # This one transforms featsmap dictionary into numpy matrixes (should be reviewed for more precision) and returns it
 def get_output_feats_filename(output_suffix=None):
@@ -242,6 +256,14 @@ def createOutputJsonIdMap(idmap, a=None):
 #Create the Json Class Map
 def createOutputJsonClassMap(classmap, a=None):
     _createFile(get_output_class_map_filename(a), classmap)
+
+#Create the Json AttributeSet List
+def createOutputJsonAttributeSetList(atbsetmap, a=None):
+    _createFile(get_output_atbset_list_filename(a), atbsetmap)
+
+#Create the Json AttributeSet Map
+def createOutputJsonAttributeSetMap(atbsetmap, a=None):
+    _createFile(get_output_atbset_map_filename(a), atbsetmap)
 
 #Create the numpy Features map
 def createOutputJsonFeaturesMap(featsmap, a=None):

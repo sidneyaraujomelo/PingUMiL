@@ -6,7 +6,6 @@ from argparse import ArgumentParser
 def main(argv=None):
     parser = ArgumentParser("Alter the node ids of several graphs so that the ids don't overlap.")
     parser.add_argument("path", help="Path to files")
-    parser.add_argument("--prefix_input", help="Prefix to input file.")
     parser.add_argument("--output_folder", help="Output folder.")
     args = parser.parse_args()
 

@@ -3,15 +3,12 @@ from config.util import *
 from config.config import *
 
 import networkx as nx
+from prov_hnx_parser import ProvHnxParser
 
 # GLOBAL VARIABLES
 idmap = {}
 classmap = {}
 featmap = {}
-
-def writeAttributeToGraph(G, node_id, attrib_name, attrib_val):
-    if (attrib_written_in_node == True):
-        G.node[node_id][attrib_name] = attrib_val
 
 def parseXML2nx(e, G, currentIdCount=0, currentXml=1, numXmls=1):
     print(currentIdCount)
@@ -153,6 +150,53 @@ def writeNewEdgeFileToList(edgesValues, output_filename):
         output.write("{} {}\n".format(edges[0], edges[1]))
     output.close() 
 
+def provList2hnx(xmls, G, extraedges=None, negativeedges=None):
+    currentIdCount = 0
+    currentXml = 1
+    numXmls = len(xmls)
+    edgesValues = []
+    negativeEdgesValues = []
+
+    if (extraedges == None and negativeedges == None):
+        parser = ProvHnxParser(xmls, G)
+        parser.parse()
+        parser.save()
+        """for e in xmls:
+            currentIdCount = len(idmap)
+            print(currentIdCount) 
+            parseXML2hnx(e,G,currentIdCount, currentXml, numXmls)
+            currentXml = currentXml+1"""
+    elif (extraedges != None and negativeedges == None):
+        for e in xmls:
+            currentIdCount = len(idmap)
+            #edgesOfCurrentGraph = []
+            print("{} {}".format(currentIdCount,extraedges[currentXml-1]))
+            edgesValues = edgesValues+edgesFileToList(extraedges[currentXml-1], currentIdCount)
+            parseXML2nx(e,G,currentIdCount, currentXml, numXmls)
+            currentXml = currentXml+1
+
+        #Write new edgeValues
+        writeNewEdgeFileToList(edgesValues, "extra_edges.txt")   
+    elif (extraedges != None and negativeedges != None):
+        for e in xmls:
+            currentIdCount = 0
+            #edgesOfCurrentGraph = []
+            #print("{} {}".format(currentIdCount,extraedges[currentXml-1]))
+            if (includeExtraEdges):
+                edgesValues = edgesValues+edgesFileToList(extraedges[currentXml-1], currentIdCount)
+            if (includeNegativeEdges):
+                negativeEdgesValues = negativeEdgesValues+edgesFileToList(negativeedges[currentXml-1], currentIdCount)
+            parseXML2nx(e,G,currentIdCount, currentXml, numXmls)
+            currentXml = currentXml+1
+
+        #Write new edgeValues 
+        if (includeExtraEdges):
+            writeNewEdgeFileToList(edgesValues, "extra_edges.txt")
+
+        #Write new negativeEdgeValues
+        if (includeNegativeEdges):
+            writeNewEdgeFileToList(negativeEdgesValues, "negative_edges.txt") 
+
 def provList2nx(xmls, G, extraedges=None, negativeedges=None):
     currentIdCount = 0
     currentXml = 1
@@ -270,14 +314,15 @@ def main(argv=None):
             G.graph['name'] = output_prefix
             print("Creating NX Graph from Provenance Graph Collection")
             if includeExtraEdges and includeNegativeEdges:
-                provList2nx(xmlFiles, G, edgesFiles, negativeEdgesFiles)
+                provList2hnx(xmlFiles, G, edgesFiles, negativeEdgesFiles)
             elif includeExtraEdges:
-                provList2nx(xmlFiles, G, edgesFiles)
+                provList2hnx(xmlFiles, G, edgesFiles)
             else:
-                provList2nx(xmlFiles, G)
+                provList2hnx(xmlFiles, G)
 
 
         # Write output json Graph
+        """
         print("Writing Json Graph File")
         json_data = nx.readwrite.json_graph.node_link_data(G)
         createOutputJsonGraph(json_data)
@@ -292,6 +337,6 @@ def main(argv=None):
 
         # Write class_map json
         print("Writing Json Features Map File")
-        createOutputJsonFeaturesMap(featmap)
+        createOutputJsonFeaturesMap(featmap)"""
 
 main()
