@@ -1,0 +1,5 @@
+*.pt
+*.txt
+dataset/*
+*.pyc
+pingumil/wrong\ codes/*
