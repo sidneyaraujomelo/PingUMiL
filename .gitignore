@@ -3,3 +3,4 @@
 dataset/*
 *.pyc
 pingumil/wrong\ codes/*
+wandb/*
