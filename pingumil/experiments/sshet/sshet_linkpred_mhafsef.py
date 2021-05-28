@@ -20,53 +20,13 @@ from pingumil.util.pytorchtools import EarlyStopping
 import pickle
 import time
 
+experiment = SSHetBaseExperiment(experiment_tag="thirdprop", epochs=1000, timestamp=time.time())
+print(experiment.output_file)
+#Read all necessary data
+data, atbsets_list, node_maps, node_feats, train_folds, test_folds = experiment.read_data()
 
-dataset_folder = "dataset/SmokeSquadron/ss_het"
-dataset_prefix = "prov"
-model_config = "configs/ct_sagemodel.json"
-timestamp = time.time()
-#timestamp = "1609274277.4902036"
-output_file = f"sshet_linkpred_thirdprop_{timestamp}.txt"
-standardization = True
-
-print(output_file)
-
-with open(output_file, "a") as fp:
-    fp.write(f"Experiment {timestamp}\n")
-
-if os.path.exists(os.path.join(dataset_folder, f"{dataset_prefix}-G.data")):
-    data = torch.load(os.path.join(dataset_folder, f"{dataset_prefix}-G.data"))
-else:
-    #First, we load all the data in the dataset folder.
-    graph_json = json.load(open(os.path.join(dataset_folder,
-                                            f"{dataset_prefix}-G.json")))
-    graph = json_graph.node_link_graph(graph_json)
-    #Create data object for pytorch geometric (takes a long time)
-    data = from_networkx(graph)
-    torch.save(data, os.path.join(dataset_folder, f"{dataset_prefix}-G.data"))
-    print(data)
-
-#Load attribute set list that describes each set
-atbsets_list = json.load(open(os.path.join(dataset_folder, "prov-atbset_list.json")))
-print(atbsets_list)
-
-#Now, we load the attribute set map files
-node_maps = []
-node_maps_files = sorted([x for x in os.listdir(dataset_folder) if x.endswith("-map.json")])
-node_maps = [json.load(open(os.path.join(dataset_folder, x))) for x in node_maps_files]
-
-#Now, we load the attribute set feats files
-node_feats = []
-node_feats_files = sorted([x for x in os.listdir(dataset_folder) if x.endswith("-feats.npy")])
-node_feats = [torch.from_numpy(np.load(os.path.join(dataset_folder, x))).float() for x in node_feats_files]
-for k in node_feats:
-    print(k.shape)
-
-#Check if everything is sound
-assert len(node_feats) == len(node_maps)
-
-for k in range(len(node_feats)):
-    assert len(node_maps[k])==node_feats[k].size()[0]
+#wandb stuff
+wandb.init(project="fsp", group="sshet_mhafse_f")
 
 #Get list of all attributes in any type of node
 atbs_list = [atb for atbsets_sublist in atbsets_list for atb in atbsets_sublist]
@@ -102,24 +62,10 @@ node_typencs = torch.cat(node_typencs)
 print(node_feats.shape)
 print(node_typencs.shape)
 
-with open(output_file, "a") as fp:
-    fp.write(f"Standardization: {standardization}\n")
-if standardization:
-    scaler = StandardScaler()
-    node_feats = torch.from_numpy(scaler.fit_transform(node_feats)).type(torch.FloatTensor)
+experiment.log(f"Standardization: {experiment.standardization}\n")
+if experiment.standardization:
+    node_feats = experiment.standardize(node_feats)
 x = torch.cat((node_feats,node_typencs),dim=1)
-
-#Now, we load the files structuring the folds for k-fold cross validation
-#containing positive and negative indirect edges
-fold_files = sorted(os.listdir(
-    os.path.join(dataset_folder, "clf")
-))
-train_folds = {p : json.load(
-                            open(os.path.join(dataset_folder,"clf",p))
-                            ) for p in fold_files if "train" in p}
-test_folds = {p : json.load(
-                            open(os.path.join(dataset_folder,"clf",p))
-                            ) for p in fold_files if "test" in p}
 
 #Configuration
 num_samples = [2, 2]
@@ -145,7 +91,7 @@ subgraph_loader = NeighborSampler(
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-sage_config = json.load(open(model_config))[0]
+sage_config = json.load(open(experiment.model_config))[0]
 sage_config["in_channels"] = sage_input_dim
 sage_model = load_model(sage_config)
 sage_model = sage_model.to(device)
@@ -173,15 +119,13 @@ data_to_transform = torch.utils.data.DataLoader(x, batch_size=batch_size)
 
 #torch.autograd.set_detect_anomaly(True)
 
-with open(output_file, "a") as fp:
-    fp.write(f"Device: {device}, visible devices: {os.environ['CUDA_VISIBLE_DEVICES']}\n")
-    fp.write(f"Type Projection: {mha_model}\n")
-    fp.write(f"Graph Representation Learning Model: {sage_model}\n")
+experiment.log(f"Device: {device}, visible devices: {os.environ['CUDA_VISIBLE_DEVICES']}\n")
+experiment.log(f"Type Projection: {mha_model}\n")
+experiment.log(f"Graph Representation Learning Model: {sage_model}\n")
 
 def train(epoch):
     sage_model.train()
     mha_model.train()
-
 
     pbar = tqdm(total=data.num_nodes)
     pbar.set_description(f'Epoch {epoch:02d}')
@@ -199,7 +143,7 @@ def train(epoch):
             batch.view(1,batch.size(0), d_model),
             batch.view(1,batch.size(0), d_model),
             batch.view(1,batch.size(0), d_model))
-    print(x_p)
+    #print(x_p)
     #print(x[0])
 
     total_loss = 0
@@ -254,23 +198,22 @@ def train(epoch):
         loss.backward(retain_graph=True)
         sage_optimizer.step()
 
+        wandb.log({"emb batch loss":loss.item()})
         total_loss += loss.item()
         pbar.update(batch_size_)
     mha_optimizer.step()
     pbar.close()
 
     loss = total_loss / len(train_loader)
+    wandb.log({"emb loss":loss})
+
     return loss
 
-sage_early_stopping = EarlyStopping(patience=50, verbose=True, path=f"embed_model_{timestamp}.pt")
-mha_early_stopping = EarlyStopping(patience=50, verbose=True, path=f"mha_model_{timestamp}.pt")
+sage_early_stopping = experiment.get_early_stopping(patience=100, verbose=True, prefix="embed")
+mha_early_stopping = experiment.get_early_stopping(patience=100, verbose=True, prefix=f"mha")
 
 best_loss = 50
-epoch = 0
-for epoch in range(1, epochs):
-#while epoch <= epochs*100:
-#while True:
-    #epoch = epoch + 1
+for epoch in range(1, experiment.epochs):
     loss = train(epoch)
     if loss < best_loss:
         best_loss = loss
@@ -281,8 +224,7 @@ for epoch in range(1, epochs):
         print("Early Stopping!")
         break
 print(f'Best Loss: {best_loss:.4f}')
-with open(output_file, "a") as fp:
-    fp.write(f'Epoch: {epoch} -> Loss (Representation Learning): {best_loss:.4f}')
+experiment.log(f'Epoch: {epoch} -> Loss (Representation Learning): {best_loss:.4f}')
 
 mha_model.load_state_dict(torch.load(mha_early_stopping.path))
 sage_model.load_state_dict(torch.load(sage_early_stopping.path))
@@ -304,85 +246,8 @@ model_config = "configs/ct_sagemodel.json"
 linkpred_config = json.load(open(model_config))[1]
 linkpred_config["in_channels"] = z.size(1)*2
 linkpred_model = load_model(linkpred_config).to(device)
+experiment.log(f"Link Prediction Model: {linkpred_model}\n")
 
-with open(output_file, "a") as fp:
-    fp.write(f"Link Prediction Config: {linkpred_config}\n")
-    fp.write(f"Link Prediction Model: {linkpred_model}\n")
+link_optimizer = torch.optim.Adam(linkpred_model.parameters(), lr=1e-3)
 
-average_metrics = { k : [] for k in ["train_loss", "p", "r"] }
-
-for k in range(len(train_folds.keys())):
-    
-    train_fold = train_folds[f"clffold-{k}-train"]
-    test_fold = test_folds[f"clffold-{k}-test"]
-    
-    #Transform Edge structure from fold files into COO tensors
-    # Also obtains the class of each edge for both train and test
-    train_source_ids = [dict_x2m[x["source"]] for x in train_fold]
-    train_target_ids = [dict_x2m[x["target"]] for x in train_fold]
-    train_edges = torch.tensor([train_source_ids, train_target_ids])
-    train_class = torch.FloatTensor([x["class"] for x in train_fold])
-    test_source_ids = [dict_x2m[x["source"]] for x in test_fold]
-    test_target_ids = [dict_x2m[x["target"]] for x in test_fold]
-    test_edges = torch.tensor([test_source_ids, test_target_ids])
-    test_class = torch.FloatTensor([x["class"] for x in test_fold])
-    
-    train_edges = train_edges.to(device)
-    test_edges = test_edges.to(device)
-    train_class = train_class.to(device)
-    test_class = test_class.to(device)
-    link_optimizer = torch.optim.Adam(linkpred_model.parameters(), lr=1e-3)
-    early_stopping = EarlyStopping(patience=50, verbose=True, path=f"predictor_{timestamp}.pt")
-    
-    best_metrics = {
-        "train_loss": 50,
-        "p": 0,
-        "r": 0
-    }
-    
-    print(f"Starting fold {k}")
-    for epoch in range(1,epochs*10):
-        linkpred_model.train()
-        link_optimizer.zero_grad()
-        out = linkpred_model(z, train_edges)
-        
-        train_loss = F.binary_cross_entropy_with_logits(out, train_class.unsqueeze(1))
-        y_pred_tag = torch.round(torch.sigmoid(out))
-        
-        corrects_results_sum = torch.eq(y_pred_tag, train_class.unsqueeze(1))
-        train_acc = float(corrects_results_sum.sum().item())/train_class.size()[0]
-        
-        train_loss.backward()
-        link_optimizer.step()
-
-        linkpred_model.eval()
-
-        out_hat = linkpred_model(z, test_edges)
-        test_loss = F.binary_cross_entropy_with_logits(out_hat, test_class.unsqueeze(1))
-        out_pred = torch.round(torch.sigmoid(out_hat)).detach()
-        
-        test_correct = torch.eq(out_pred, test_class.unsqueeze(1))
-        test_acc =  float(test_correct.sum().item()) / test_class.size()[0]
-        print(f"{k}: Train loss: {train_loss} Train acc: {train_acc}")
-        #print(f"Test loss: {test_loss} Test acc:{test_acc} "
-        #      +f"P:{precision_score(out_pred.cpu().numpy(),test_class.unsqueeze(1).cpu().numpy())} "
-        #      +f"R:{recall_score(out_pred.cpu().numpy(),test_class.unsqueeze(1).cpu().numpy())}")
-        p = precision_score(out_pred.cpu().numpy(),test_class.unsqueeze(1).cpu().numpy())
-        r = recall_score(out_pred.cpu().numpy(),test_class.unsqueeze(1).cpu().numpy())
-        if train_loss.cpu() < best_metrics["train_loss"]:
-            best_metrics["train_loss"] = train_loss.cpu().item()
-            best_metrics["r"] = r
-            best_metrics["p"] = p
-
-        early_stopping(train_loss, linkpred_model)
-        if early_stopping.early_stop:
-            print("Early Stopping!")
-            break
-    for k,v in best_metrics.items():
-        average_metrics[k].append(v)
-
-    with open(output_file, "a") as fp:
-        fp.write(f"{best_metrics}\n")
-with open(output_file, "a") as fp:
-    for k,v in average_metrics.items():
-        fp.write(f"{k}:{torch.mean(torch.Tensor(v)).item()}({torch.var(torch.Tensor(v)).item()})\n")
+experiment.link_prediction_step(device, linkpred_model, link_optimizer, train_folds, z, test_folds, dict_x2m)

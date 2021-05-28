@@ -29,12 +29,13 @@ class ScaledDotProductAttention(nn.Module):
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''
 
-    def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1):
+    def __init__(self, n_head, d_model, d_k, d_v, out_dim=None, dropout=0.1):
         super().__init__()
 
         self.n_head = n_head
         self.d_k = d_k
         self.d_v = d_v
+        self.out_dim = out_dim
 
         self.w_qs = nn.Linear(d_model, n_head * d_k, bias=False)
         self.w_ks = nn.Linear(d_model, n_head * d_k, bias=False)
@@ -45,6 +46,9 @@ class MultiHeadAttention(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
+
+        if self.out_dim:
+            self.out_linear = nn.Linear(d_model, out_dim, bias=False)
 
 
     def forward(self, q, k, v, mask=None):
@@ -75,5 +79,8 @@ class MultiHeadAttention(nn.Module):
         q += residual
 
         q = self.layer_norm(q)
+
+        if self.out_dim:
+            q = self.out_linear(q)
 
         return q, attn

@@ -1,4 +1,6 @@
 from pingumil.models.graphsage import GraphSAGE
+from pingumil.models.gat import GAT
+from pingumil.models.hgt import HGT
 from pingumil.models.typeprojection import TypeProjection
 from pingumil.models.linkpredictor import LinkPredictor
 from pingumil.models.multiheadattention import MultiHeadAttention
@@ -20,9 +22,11 @@ def load_model(config):
             config["composition_function"]
             )
     if config["model"] == "mhattention":
-        return MultiHeadAttention(
-            config["n_head"],
-            config["d_model"],
-            config["d_k"],
-            config["d_v"]
-        )
+        del config["model"]
+        return MultiHeadAttention(**config)
+    if config["model"] == "gat":
+        del config["model"]
+        return GAT(**config)
+    if config["model"] == "hgt":
+        del config["model"]
+        return HGT(**config)
