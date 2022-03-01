@@ -8,13 +8,14 @@ def writeAttributeToGraph(G, node_id, attrib_name, attrib_val):
         G.nodes[node_id][attrib_name] = attrib_val
 
 class ProvHnxParser():
-    def __init__(self, provs, g):
+    def __init__(self, provs, g, use_graph_name=False):
         if type(provs) == list:
             self.provs = provs
         else:
             self.provs = [provs]
         self.num_provs = len(self.provs)
         self.g = g
+        self.use_graph_name = use_graph_name
         self.node_atb_sets = []
         self.idmap = OrderedDict()
         self.classmap = OrderedDict()
@@ -186,24 +187,27 @@ class ProvHnxParser():
             print(f"{i}:{len(fmap)}")
 
     def save(self):
+        output_prefix = None
+        if self.use_graph_name:
+            output_prefix = self.g.graph['name']
         # Write output json Graph
         print("Writing Json Graph File")
         json_data = nx.readwrite.json_graph.node_link_data(self.g)
-        createOutputJsonGraph(json_data)
+        createOutputJsonGraph(json_data, output_prefix)
 
         # Write id map json
         print("Writing Json Id Map File")
-        createOutputJsonIdMap(self.idmap)
+        createOutputJsonIdMap(self.idmap, output_prefix)
 
         # Write class_map json
         print("Writing Json Class Map File")
-        createOutputJsonClassMap(self.classmap)
+        createOutputJsonClassMap(self.classmap, output_prefix)
 
         # Write node attribute sets json
         print("Writing Json Node Attribute Sets File")
-        createOutputJsonAttributeSetList(self.node_atb_sets)
+        createOutputJsonAttributeSetList(self.node_atb_sets, output_prefix)
         
         #Write feature numpy per attribute sets
         for atb_set_id, featmap in self.featmap.items():
-            createOutputJsonAttributeSetMap(list(featmap.keys()), f"atbset_{atb_set_id}")
-            createOutputJsonFeaturesMap(featmap, f"atbset_{atb_set_id}")
+            createOutputJsonAttributeSetMap(list(featmap.keys()), f"{output_prefix}_atbset_{atb_set_id}")
+            createOutputJsonFeaturesMap(featmap, f"{output_prefix}_atbset_{atb_set_id}")

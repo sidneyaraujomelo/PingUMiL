@@ -1,6 +1,8 @@
 # INPUT PARAMETERS
 # Only One or many provenance files
 onlyOneFile = False
+# Merge into one graph?
+mergeGraphs = False
 # Is it k-fold Generated?
 kFoldGenerated = False
 kFoldNumber = 10
@@ -16,7 +18,7 @@ leaveOneGraphOutOfTraining = False
 inputfile = "output 08.xml"
 
 # Provenance graph files name separated by ,
-input_prefix = "/home/sidneymelo/Documentos/PingUMiL/Dataset/SmokeSquadron/no_target_edge_graph/"
+input_prefix = "/raid/home/smelo/PingUMiL-pytorch/dataset/GPP/Raw Data/"
 #inputfiles = ["P1-S1.xml","P1-S2.xml", "P1-S3.xml", "P2-S1.xml", "P2-S2.xml", "P2-S3.xml", "P3-S1.xml", "P3-S2.xml", "P3-S3.xml", "P4-S1.xml"]
 inputfiles = []
 
@@ -27,8 +29,9 @@ extraedgesfiles = ['e01.txt','e02.txt','e03.txt']
 negativeedgefiles = []
 
 # Prefix for all output files which will be generated
-output_prefix = "prov"
-output_folder = "ss10_test/"
+use_graph_name = True
+output_prefix = "gpp"
+output_folder = "/raid/home/smelo/PingUMiL-pytorch/dataset/GPP/preprocessed_graphs/"
 
 # Ratio of training, test and validation sets
 train_ratio = 0.7

@@ -158,7 +158,7 @@ def provList2hnx(xmls, G, extraedges=None, negativeedges=None):
     negativeEdgesValues = []
 
     if (extraedges == None and negativeedges == None):
-        parser = ProvHnxParser(xmls, G)
+        parser = ProvHnxParser(xmls, G, use_graph_name)
         parser.parse()
         parser.save()
         """for e in xmls:
@@ -298,10 +298,8 @@ def main(argv=None):
                     xmlFiles = xmlFiles[-1:]+xmlFiles[:-1]
                 
     else:
-
-        G = nx.Graph()
-
         if onlyOneFile:
+            G = nx.Graph()
             e = loadProvenanceXML(input_prefix+inputfile)
             buildCategoricDictionary(e)
             G.graph['name'] = output_prefix
@@ -309,16 +307,29 @@ def main(argv=None):
             prov2nx(e, G)
 
         else:
-            xmlFiles, nameXmlFiles = loadProvenanceXMLList(input_prefix, inputfiles)
-            buildCategoricDictionaryForList(xmlFiles)
-            G.graph['name'] = output_prefix
-            print("Creating NX Graph from Provenance Graph Collection")
-            if includeExtraEdges and includeNegativeEdges:
-                provList2hnx(xmlFiles, G, edgesFiles, negativeEdgesFiles)
-            elif includeExtraEdges:
-                provList2hnx(xmlFiles, G, edgesFiles)
+            if mergeGraphs:
+                xmlFiles, nameXmlFiles = loadProvenanceXMLList(input_prefix, inputfiles)
+                #print(nameXmlFiles)
+                buildCategoricDictionaryForList(xmlFiles)
+                G = nx.Graph()
+                G.graph['name'] = output_prefix
+                print("Creating NX Graph from Provenance Graph Collection")
+                if includeExtraEdges and includeNegativeEdges:
+                    provList2hnx(xmlFiles, G, edgesFiles, negativeEdgesFiles)
+                elif includeExtraEdges:
+                    provList2hnx(xmlFiles, G, edgesFiles)
+                else:
+                    provList2hnx(xmlFiles, G)
             else:
-                provList2hnx(xmlFiles, G)
+                xmlFiles, nameXmlFiles = loadProvenanceXMLList(input_prefix, inputfiles)
+                buildCategoricDictionaryForList(xmlFiles)
+                for k in range(len(xmlFiles)):
+                    xmlFile = xmlFiles[k]
+                    nameXmlFile = nameXmlFiles[k]
+                    G = nx.Graph()
+                    G.graph['name'] = nameXmlFile
+                    provList2hnx([xmlFile], G)
+
 
 
         # Write output json Graph

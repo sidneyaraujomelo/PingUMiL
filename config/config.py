@@ -7,7 +7,7 @@ import os
 import pickle as pkl
 
 from config.exp_config import *
-from config.smokesquad_config import *
+from config.gpp_config import *
 
 
 random.seed()
@@ -106,11 +106,16 @@ def get_set_edge(a):
 
 
 def findNodeWithTag(element, tag):
+    #print(element)
     if element.tag == tag:
         return element
     else:
+        #print(element)
         for child in element:
-            return findNodeWithTag(child, tag)
+            found_node = findNodeWithTag(child, tag)
+            if found_node is not None:
+                return found_node
+    return None
 
 
 def findAttributeNodeWithName(element, name):
