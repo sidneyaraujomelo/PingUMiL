@@ -1,4 +1,6 @@
-dataset
-.pt
-experiment_log
-wandb
+dataset/**
+*.pt
+*.pyc
+experiment_log/**
+wandb/**
+pingumil/**
