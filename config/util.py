@@ -9,9 +9,9 @@ def loadProvenanceXML(file_path):
     e = ET.parse(file_path).getroot()
     return e
 
-def loadProvenanceXMLList(input_prefix, inputfiles):
+def loadProvenanceXMLList(input_prefix, inputfiles, ignore_files=[]):
     if (len(inputfiles)==0):
-        inputfiles = [f for f in os.listdir(input_prefix) if os.path.isfile(os.path.join(input_prefix,f)) and f.endswith('.xml')]
+        inputfiles = [f for f in os.listdir(input_prefix) if os.path.isfile(os.path.join(input_prefix,f)) and f.endswith('.xml') and f not in ignore_files]
     inputfiles.sort()
     print(inputfiles)
     xmls = [ET.parse(input_prefix + filename).getroot() for filename in inputfiles]

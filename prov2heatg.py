@@ -321,7 +321,7 @@ def main(argv=None):
                 else:
                     provList2hnx(xmlFiles, G)
             else:
-                xmlFiles, nameXmlFiles = loadProvenanceXMLList(input_prefix, inputfiles)
+                xmlFiles, nameXmlFiles = loadProvenanceXMLList(input_prefix, inputfiles, ignorefiles)
                 buildCategoricDictionaryForList(xmlFiles)
                 for k in range(len(xmlFiles)):
                     xmlFile = xmlFiles[k]

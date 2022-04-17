@@ -135,7 +135,26 @@ class ProvHnxParser():
         else:
             atb_set_id = self.node_atb_sets.index(feature_name)
         self.featmap[atb_set_id][node_id_int] = feature_values
-        self.classmap[node_id_int] = label
+        # First, we check if label condition is set. If yes, we check if this node
+        # should be included in classmap.
+        if label_conditions is not None:
+            all_cond_satisf = True
+            for k,v in label_conditions.items():
+                if k in tag_name_list:
+                    if tag_val_dict[k] != v:
+                        all_cond_satisf = False
+                elif k in attrib_name_list:
+                    if attrib_val_dict[k] != v:
+                        all_cond_satisf = False
+            if all_cond_satisf:
+                if label is None and label_attrib_name == 'function':
+                    try:
+                        label = label_func(self.g.graph['name'])
+                    except KeyError:
+                        label = None
+                    print(f"Current file: {self.g.graph['name']}, current label: {label}")
+                    #assert 1==2
+                self.classmap[node_id_int] = label
     
     def __parseEdge(self, edge, current_prov):
         # Get source vertex

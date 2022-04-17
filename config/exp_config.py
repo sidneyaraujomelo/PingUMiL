@@ -21,6 +21,7 @@ inputfile = "output 08.xml"
 input_prefix = "/raid/home/smelo/PingUMiL-pytorch/dataset/GPP/Raw Data/"
 #inputfiles = ["P1-S1.xml","P1-S2.xml", "P1-S3.xml", "P2-S1.xml", "P2-S2.xml", "P2-S3.xml", "P3-S1.xml", "P3-S2.xml", "P3-S3.xml", "P4-S1.xml"]
 inputfiles = []
+ignorefiles = []
 
 # Extra edge files
 extraedgesfiles = ['e01.txt','e02.txt','e03.txt']
@@ -31,7 +32,7 @@ negativeedgefiles = []
 # Prefix for all output files which will be generated
 use_graph_name = True
 output_prefix = "gpp"
-output_folder = "/raid/home/smelo/PingUMiL-pytorch/dataset/GPP/preprocessed_graphs/"
+output_folder = "/raid/home/smelo/PingUMiL-pytorch/dataset/GPP/preprocessed_graphs_test/"
 
 # Ratio of training, test and validation sets
 train_ratio = 0.7
