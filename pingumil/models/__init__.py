@@ -4,6 +4,7 @@ from pingumil.models.hgt import HGT
 from pingumil.models.typeprojection import TypeProjection
 from pingumil.models.linkpredictor import LinkPredictor
 from pingumil.models.multiheadattention import MultiHeadAttention
+from pingumil.models.multilabel_classifier import MultilabelClassifier
 
 def load_model(config):
     if config["model"] == "graphsage":
@@ -30,3 +31,6 @@ def load_model(config):
     if config["model"] == "hgt":
         del config["model"]
         return HGT(**config)
+    if config["model"] == "multilabel_classification":
+        del config["model"]
+        return MultilabelClassifier(**config)
