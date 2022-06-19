@@ -1,12 +1,38 @@
 from config.util import getEdgeSourceAndTargetIDs, getVertexByID, getTextFromNode, sumEdgeTypeDictionaries
-from config.config import *
-from config.preprocess import *
 import math
 import os
 from argparse import ArgumentParser
 from random import choice
 import xml.etree.ElementTree as ET
 from tqdm import tqdm
+
+def general_statistics(input_path):
+    if os.path.isfile(input_path):
+        filenames = input_path
+    else:
+        filenames = [x for x in os.listdir(input_path) if os.path.isfile(os.path.join(input_path,x)) and x.endswith(".xml")]
+    num_graphs = len(filenames)
+    num_nodes = 0
+    num_edges = 0
+    for filename in tqdm(filenames):
+        tree = ET.parse(os.path.join(input_path, filename))
+        root = tree.getroot()
+        for element in root:
+            if element.tag == "vertices":
+                num_nodes = num_nodes + len(element)
+            elif element.tag == "edges":
+                num_edges = num_edges + len(element)
+            else:
+                continue
+    print(f""" 
+          Dataset from {input_path}
+          Graphs: {num_graphs}
+          Nodes: {num_nodes}
+          Edges: {num_edges}
+          Average edge per graph: {num_edges/num_graphs}
+          """)
+    
+    
 
 def getPingUMiLEdgeTypes(tree):
     dictEdgeTypes = {}
@@ -90,6 +116,8 @@ def node_atb_sets_method(input_path):
 if __name__ == "__main__":
     parser = ArgumentParser("Set of methods for PinGML.")
     parser.add_argument("input_path", help="Path to file or directory")
+    parser.add_argument("--statistics", action="store_true",
+                        help="Get statistics for input graphs.")
     parser.add_argument("--edge_sum", action="store_true",
                         help="Get all edge types and counts them")
     parser.add_argument("--node_atb_sets", action="store_true",
@@ -98,6 +126,8 @@ if __name__ == "__main__":
 
     input_path = args.input_path
 
+    if args.statistics:
+        general_statistics(input_path)
     if args.edge_sum:
         edge_sum_method(input_path)
     if args.node_atb_sets:
