@@ -54,7 +54,7 @@ class HGTConv(MessagePassing):
     
     def forward(self, node_inp, node_type, edge_index, edge_type, edge_time):
         return self.propagate(edge_index, node_inp=node_inp, node_type=node_type, \
-                              edge_type=edge_type, edge_time = edge_time)
+                              edge_type=edge_type, edge_time=edge_time)
     
     def message(self, edge_index_i, node_inp_i, node_inp_j, node_type_i, node_type_j, edge_type, edge_time):
         '''

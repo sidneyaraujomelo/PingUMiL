@@ -1,6 +1,24 @@
-import xml.etree.ElementTree as ET
 import os
+import xml.etree.ElementTree as ET
+import torch
 
+def generate_class_weights(x):
+    if torch.is_tensor(x):
+        n_samples = x.size(0)
+        n_classes = x.size(1)
+    elif type(x) == list:
+        n_samples = len(x)
+        n_classes = len(x[0])
+    class_count = [0]*n_classes
+    
+    for v in x:
+        for k in range(n_classes):
+            if v[k] > 0:
+                class_count[k] = class_count[k]+1
+
+    class_weights = [n_samples / (n_classes * freq) if freq > 0 else 1 for freq in class_count]
+    return class_weights
+    
 def create_path(path):
     if not os.path.exists(path):
         os.makedirs(path)
