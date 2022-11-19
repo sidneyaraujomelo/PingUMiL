@@ -1,6 +1,7 @@
 *.pt
 *.txt
-dataset/*
 *.pyc
 pingumil/wrong\ codes/*
-wandb/*
+dataset/**
+experiment_log/**
+wandb/**

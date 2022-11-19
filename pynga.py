@@ -1,4 +1,6 @@
 from config.util import getEdgeSourceAndTargetIDs, getVertexByID, getTextFromNode, sumEdgeTypeDictionaries
+from config.config import *
+from config.preprocess import *
 import math
 import os
 from argparse import ArgumentParser
@@ -57,7 +59,36 @@ def general_statistics_xml(input_path):
           Average edge per graph: {num_edges/num_graphs}
           """)
     
+    from tqdm import tqdm
+
+def general_statistics(input_path):
+    if os.path.isfile(input_path):
+        filenames = input_path
+    else:
+        filenames = [x for x in os.listdir(input_path) if os.path.isfile(os.path.join(input_path,x)) and x.endswith(".xml")]
+    num_graphs = len(filenames)
+    num_nodes = 0
+    num_edges = 0
+    for filename in tqdm(filenames):
+        tree = ET.parse(os.path.join(input_path, filename))
+        root = tree.getroot()
+        for element in root:
+            if element.tag == "vertices":
+                num_nodes = num_nodes + len(element)
+            elif element.tag == "edges":
+                num_edges = num_edges + len(element)
+            else:
+                continue
+    print(f""" 
+          Dataset from {input_path}
+          Graphs: {num_graphs}
+          Nodes: {num_nodes}
+          Edges: {num_edges}
+          Average edge per graph: {num_edges/num_graphs}
+          """)
     
+    
+
 
 def getPingUMiLEdgeTypes(tree):
     dictEdgeTypes = {}
