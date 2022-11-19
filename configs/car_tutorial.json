@@ -1,0 +1,106 @@
+{
+    "attributes" : [
+        {
+            "name" : "Throttle",
+            "type" : "numeric",
+            "default": 1
+        },
+        {
+            "name" : "Speed",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "CurrentGear",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "CurrentEnginePower",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "TurnRate",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "CarMass",
+            "type" : "numeric",
+            "default": 1500
+        },
+        {
+            "name" : "VelocityVector_X",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "VelocityVertor_Y",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "VelocityVector_Z",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "AngularVelocity_X",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "AngularVelocity_Y",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "AngularVelocity_Z",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "DragVector_X",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "DragVector_Y",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "DragVector_Z",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "ObjectPosition_X",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "ObjectPosition_Y",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name" : "ObjectPosition_Z",
+            "type" : "numeric",
+            "default": 0
+        }
+    ],
+    "tags" : [
+        {
+            "name" : "label",
+            "type" : "categoric",
+            "default": "None"
+        },
+        {
+            "name" : "type",
+            "type" : "categoric",
+            "default": "None"
+        }
+    ]
+}

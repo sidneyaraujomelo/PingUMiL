@@ -1,0 +1,52 @@
+{
+    "attributes" : [
+        {
+            "name" : "HP",
+            "type" : "numeric",
+            "default": 0
+        },
+        {
+            "name": "Power",
+            "type": "numeric",
+            "default": 0
+        },
+        {
+            "name": "ObjectName",
+            "type": "categoric",
+            "default": "None"
+        },
+        {
+            "name": "ObjectPosition_X",
+            "type": "numeric",
+            "default": 0
+        },
+        {
+            "name": "ObjectPosition_Y",
+            "type": "numeric",
+            "default": 0
+        },
+        {
+            "name": "ObjectPosition_Z",
+            "type": "numeric",
+            "default": 0
+        },
+        {
+            "name": "Increase Wealth",
+            "type": "numeric",
+            "default": 0
+        },
+        {
+            "name": "Increase Level",
+            "type": "numeric",
+            "default": 0
+        }
+    ],
+    "tags" : [
+        {
+            "name" : "type",
+            "type" : "categoric",
+            "default": "None"
+        }
+    ],
+    "label" : "ObjectName"
+}

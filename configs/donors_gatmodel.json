@@ -1,0 +1,15 @@
+[
+    {
+        "model": "gat",
+        "in_channels" : 0,
+        "hidden_channels" : [32, 32],
+        "out_channels": 256,
+        "n_heads" : 8,
+        "dropout": 0.5
+    },
+    {
+        "model": "link_pred",
+        "in_channels": 512,
+        "composition_function": "concatenate"
+    }
+]
