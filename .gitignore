@@ -5,3 +5,4 @@ pingumil/wrong\ codes/*
 dataset/**
 experiment_log/**
 wandb/**
+output/**
