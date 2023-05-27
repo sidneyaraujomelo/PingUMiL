@@ -74,30 +74,30 @@ def createPklFile(filename, data):
     pkl.dump(data, f)  
 
 #Create the Json Graph
-def create_output_json_graph(json_data, a=None):
-    _createFile(get_output_graph_filename(a), json_data)
+def create_output_json_graph(json_data, a=None, params=None):
+    _createFile(get_output_graph_filename(params, a), json_data)
 
 #Create the Json Id Map
-def create_output_json_idmap(idmap, a=None):
-    _createFile(get_output_id_map_filename(a), idmap)
+def create_output_json_idmap(idmap, a=None, params=None):
+    _createFile(get_output_id_map_filename(params, a), idmap)
 
 #Create the Json Class Map
-def create_output_json_classmap(classmap, a=None):
-    _createFile(get_output_class_map_filename(a), classmap)
+def create_output_json_classmap(classmap, a=None, params=None):
+    _createFile(get_output_class_map_filename(params, a), classmap)
 
 #Create the Json AttributeSet List
-def create_output_json_attributeset_list(atbsetmap, a=None):
-    _createFile(get_output_atbset_list_filename(a), atbsetmap)
+def create_output_json_attributeset_list(atbsetmap, a=None, params=None):
+    _createFile(get_output_atbset_list_filename(params, a), atbsetmap)
 
 #Create the Json AttributeSet Map
-def create_output_json_attributeset_map(atbsetmap, a=None):
-    _createFile(get_output_atbset_map_filename(a), atbsetmap)
+def create_output_json_attributeset_map(atbsetmap, a=None, params=None):
+    _createFile(get_output_atbset_map_filename(params, a), atbsetmap)
 
 #Create the numpy Features map
-def create_output_json_features_map(featsmap, a=None):
+def create_output_json_features_map(featsmap, a=None, params=None):
     # TRANSFORM FEATSMAP DICTIONARY INTO NUMPY MATRIXES
     npdata = dictToNpArrayofArrays(featsmap)
-    filename = get_output_feats_filename(a) 
+    filename = get_output_feats_filename(params, a) 
     f = open(filename, 'w')
     np.save(filename, npdata)
 

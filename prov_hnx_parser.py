@@ -124,7 +124,7 @@ class ProvHnxParser():
         tag_default_value_list = self.data_config["tag_default_value_list"]
         label_attrib_name = self.data_config["label_attrib_name"]
         label_conditions = self.data_config["label_conditions"]
-        
+
         """ VERTEX ID """
         node_id = get_text_from_node(vertex, "ID")
         node_id = int(node_id.split("_")[-1])

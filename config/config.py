@@ -3,6 +3,7 @@ import errno
 import json
 import random
 import os
+import numpy as np
 
 '''if (len(attrib_name_list) != len(attrib_type_list)):
     print("Attributes name and type list are not the same size.")
