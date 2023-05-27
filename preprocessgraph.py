@@ -24,8 +24,8 @@ def main(argv=None):
             setVertexIntID(node, node_id+c_node_offset)
         edges = graphRoots[i].find("edges")
         for edge in edges:
-            source_id = int(getTextFromNode(edge,"sourceID").split('_')[-1])
-            target_id = int(getTextFromNode(edge,"targetID").split('_')[-1])
+            source_id = int(get_text_from_node(edge,"sourceID").split('_')[-1])
+            target_id = int(get_text_from_node(edge,"targetID").split('_')[-1])
             setTextToNode(edge,"sourceID","vertex_"+str(source_id+c_node_offset))
             setTextToNode(edge,"targetID","vertex_"+str(target_id+c_node_offset))
         c_node_offset = c_node_offset + getNumberOfNodes(graphRoots[i])

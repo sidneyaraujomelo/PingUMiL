@@ -29,7 +29,7 @@ def loadExtraEdgeFiles(input_prefix, extraedgesfiles):
 """ Given a list of attributes, search all attribute nodes for
 the attributes of that list """
 
-def getAttributes(atbs_node, atbs_name_list):
+def get_attributes(atbs_node, atbs_name_list):
     atbs_dict = {}
     # Iterates 'atribute' node
     for atb_node in atbs_node:
@@ -42,7 +42,7 @@ def getAttributes(atbs_node, atbs_name_list):
     return atbs_dict
 
 """ Given a list of tags, search all tag values on a node for the tags of that list """
-def getTagValues(node, tag_name_list):
+def get_tag_values(node, tag_name_list):
     tagsvalues_dict = {}
     #Iterates over tag_name_list and adds values to dictionary
     for tag_name in tag_name_list:
@@ -51,7 +51,7 @@ def getTagValues(node, tag_name_list):
     return tagsvalues_dict
 
 """Obtaining Node text value from first element with a given tag"""
-def getTextFromNode(node, tag):
+def get_text_from_node(node, tag):
     a = node.find(tag).text
     return a
 

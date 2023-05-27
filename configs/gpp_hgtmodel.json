@@ -1,0 +1,14 @@
+[
+    {
+        "model": "hgt",
+        "in_dim" : 0,
+        "n_hid" : 128,
+        "n_heads" : 4,
+        "dropout": 0.5,
+        "n_layers" : 1,
+        "use_RTE" : 0
+    },
+    {
+        "model": "multilabel_classification"
+    }
+]
