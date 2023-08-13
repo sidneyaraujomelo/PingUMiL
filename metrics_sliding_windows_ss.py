@@ -125,18 +125,15 @@ def get_player_metrics(player_attributed_nodes, player_label, start_time):
 
 def process_prov_xml(path):
     input_file = path
-    xmlFile = loadProvenanceXML(input_file)
     parse_config = json.load(open("config/parse_config.json","r"))
     data_config = json.load(open("config/smokesquad_config.json","r"))
     assert len(data_config["attrib_name_list"]) == len(data_config["attrib_type_list"])
     assert len(data_config["attrib_name_list"]) == len(data_config["attrib_default_value_list"])
     print(parse_config, data_config)
-    G = nx.Graph()
-    G.graph['name'] = os.path.basename(input_file)
-    parser = ProvHnxParser(xmlFile, G, parse_config, data_config, True)
+    parser = ProvHnxParser(parse_config, data_config, True, input_file)
     parser.parse()
     #parser.save()
-
+    G = parser.dataset[0].g
     #First, we get player nodes
     label_values = nx.get_node_attributes(G, "label")
     object_tag_values = nx.get_node_attributes(G, "ObjectTag")

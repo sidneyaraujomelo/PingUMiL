@@ -1,34 +1,44 @@
 import networkx as nx
 from collections import OrderedDict
 import random
-from config.util import get_text_from_node, get_tag_values, get_attributes
+import json
+import os
+from config.util import get_text_from_node, get_tag_values, get_attributes, loadProvenanceXML, loadProvenanceXMLList
 from config.config import get_ohv_for_attribute, find_node_with_tag, find_attribute_node_with_name
 from config.graph_splitter import NodeSplitter, EdgeSplitter
+from config.parse_configuration import ParseConfiguration
 from parsedgraphexporter import ParsedGraphExporter
+from pingumil.pingdataset import PingDataset
 
 def writeAttributeToGraph(G, node_id, attrib_name, attrib_val, attrib_written_in_node=False):
     if (attrib_written_in_node == True):
         G.nodes[node_id][attrib_name] = attrib_val
 
 class ProvHnxParser():
-    def __init__(self, provs, g, parse_config, data_config, use_graph_name=False):
-        if type(provs) == list:
-            self.provs = provs
-        else:
-            self.provs = [provs]
-        self.num_provs = len(self.provs)
-        self.g = g
+    def __init__(self, parse_config, data_config, use_graph_name=False, provs=None):
+        self.dataset = []
         self.parse_config = parse_config
         self.data_config = data_config
+        self.parse_configuration = ParseConfiguration(self.parse_config)
         self.use_graph_name = use_graph_name
-        self.node_atb_sets = []
-        self.idmap = OrderedDict()
-        self.classmap = OrderedDict()
-        self.featmap = OrderedDict()
+        if provs:
+            #In case you don't want to create another config for testing a single file
+            if type(provs) == list:
+                self.provs, self.prov_names = loadProvenanceXMLList(None, provs)
+            else:
+                self.provs = [loadProvenanceXML(provs)]
+                self.prov_names = [os.path.basename(provs)]
+        else:
+            if self.parse_configuration.onlyOneFile:
+                self.provs = [loadProvenanceXML(self.parse_configuration.input_prefix+self.parse_configuration.inputfile)]
+                self.prov_names = [os.path.basename(self.parse_configuration.inputfile)]
+            else:
+                self.provs, self.prov_names = loadProvenanceXMLList(self.parse_configuration.input_prefix,
+                                                                    self.parse_configuration.inputfiles)
+        self.num_provs = len(self.provs)
         self.categoric_att_dict = {}
         self.sup_dict = {}
         self.build_categoric_dictionary_for_list()
-        self.graph_exporter = ParsedGraphExporter(self.parse_config)
         self.node_splitter = NodeSplitter(**self.parse_config["node_split"])
         self.edge_splitter = EdgeSplitter(**self.parse_config["edge_split"])
     
@@ -115,7 +125,7 @@ class ProvHnxParser():
         print("One-hot-vector representations of every categoric attribute: ")
         print(self.categoric_att_dict)
     
-    def __parseVertex(self, vertex, current_prov):
+    def __parseVertex(self, ping_data, vertex, current_prov):
         attrib_written_in_node = self.parse_config["attrib_written_in_node"]
         attrib_type_list = self.data_config["attrib_type_list"]
         attrib_name_list = self.data_config["attrib_name_list"]
@@ -128,21 +138,21 @@ class ProvHnxParser():
         """ VERTEX ID """
         node_id = get_text_from_node(vertex, "ID")
         node_id = int(node_id.split("_")[-1])
-        node_id_int = len(self.idmap)
-        self.idmap[node_id_int] = node_id_int
+        node_id_int = len(ping_data.idmap)
+        ping_data.idmap[node_id] = node_id_int
 
-        self.g.add_node(node_id_int)
+        ping_data.g.add_node(node_id_int)
 
         node_set = self.node_splitter.get_set_element(random.random())
         #print(node_set)
         # Iterate over the array 'node_set' containing bool values
         # for "test" and "val"
         for idx, value in node_set.items():
-            self.g.nodes[node_id_int][idx] = value
+            ping_data.g.nodes[node_id_int][idx] = value
 
         # This information is added so that we know the origin of
         # this node
-        self.g.nodes[node_id_int]['origin'] = current_prov
+        ping_data.g.nodes[node_id_int]['origin'] = current_prov
 
         feature_name = []
         feature_values = []
@@ -157,7 +167,7 @@ class ProvHnxParser():
                     label = get_ohv_for_attribute(self.categoric_att_dict,
                                                   tag_name,
                                                   tag_value)
-                    writeAttributeToGraph(self.g, node_id_int,
+                    writeAttributeToGraph(ping_data.g, node_id_int,
                                           tag_name, tag_value, attrib_written_in_node)
                 else:
                     default_value = tag_default_value_list[
@@ -165,7 +175,7 @@ class ProvHnxParser():
                     label = get_ohv_for_attribute(self.categoric_att_dict,
                                                   tag_name,
                                                   default_value)
-                    writeAttributeToGraph(self.g, node_id_int,
+                    writeAttributeToGraph(ping_data.g, node_id_int,
                                             tag_name,
                                             default_value,
                                             attrib_written_in_node)
@@ -173,17 +183,17 @@ class ProvHnxParser():
             if (tag_type_list[idx] == 'numeric'):
                 if (tag_name in tag_val_dict):
                     tag_value = float(
-                        tag_val_dict[tag_name].replace(',','.'))
+                        tag_val_dict[tag_name].replace(',', '.'))
                     feature_name.append(tag_name)
                     feature_values.append(tag_value)
-                    writeAttributeToGraph(self.g, node_id_int,
+                    writeAttributeToGraph(ping_data.g, node_id_int,
                                             tag_name, tag_value, attrib_written_in_node)
             elif (tag_type_list[idx] == 'categoric'):
                 tag_value = tag_val_dict[tag_name]
                 onehotvectorrep = get_ohv_for_attribute(self.categoric_att_dict,
                                                         tag_name,
                                                         tag_value)
-                writeAttributeToGraph(self.g, node_id_int,
+                writeAttributeToGraph(ping_data.g, node_id_int,
                                         tag_name, tag_value, attrib_written_in_node)
                 for i, x in enumerate(onehotvectorrep):
                     feature_values.append(float(x))  
@@ -197,17 +207,17 @@ class ProvHnxParser():
                 label = get_ohv_for_attribute(self.categoric_att_dict,
                                               label_attrib_name,
                                               attrib_value)
-                writeAttributeToGraph(self.g, node_id_int,
+                writeAttributeToGraph(ping_data.g, node_id_int,
                                         label_attrib_name,
                                         attrib_value, attrib_written_in_node)
                 continue
             if (attrib_type_list[idx] == 'numeric'):
                 if (attrib_name in attrib_val_dict):
                     attrib_value = float(
-                        attrib_val_dict[attrib_name].replace(',','.'))
+                        attrib_val_dict[attrib_name].replace(',', '.'))
                     feature_values.append(attrib_value)
                     feature_name.append(attrib_name)
-                    writeAttributeToGraph(self.g, node_id_int,
+                    writeAttributeToGraph(ping_data.g, node_id_int,
                                             attrib_name, attrib_value, attrib_written_in_node)
                 #else:
                 #    features.append(attrib_default_value_list[idx])
@@ -219,7 +229,7 @@ class ProvHnxParser():
                     onehotvectorrep = get_ohv_for_attribute(self.categoric_att_dict,
                                                             attrib_name,
                                                             attrib_value)
-                    writeAttributeToGraph(self.g, node_id_int,
+                    writeAttributeToGraph(ping_data.g, node_id_int,
                                             attrib_name, attrib_value, attrib_written_in_node)
                 #else:
                     #print(attrib_default_value_list)
@@ -237,13 +247,13 @@ class ProvHnxParser():
         # featmaps for a give node attribute set (type).
         # Each featmap maps the node id of type X to its feature
         # values.
-        if feature_name not in self.node_atb_sets:
-            self.node_atb_sets.append(feature_name)
-            atb_set_id = len(self.node_atb_sets)-1
-            self.featmap[atb_set_id] = OrderedDict()
+        if feature_name not in ping_data.node_atb_sets:
+            ping_data.node_atb_sets.append(feature_name)
+            atb_set_id = len(ping_data.node_atb_sets)-1
+            ping_data.featmap[atb_set_id] = OrderedDict()
         else:
-            atb_set_id = self.node_atb_sets.index(feature_name)
-        self.featmap[atb_set_id][node_id_int] = feature_values
+            atb_set_id = ping_data.node_atb_sets.index(feature_name)
+        ping_data.featmap[atb_set_id][node_id_int] = feature_values
         # First, we check if label condition is set. If yes, we check if this node
         # should be included in classmap.
         if label_conditions is not None and len(label_conditions) > 0:
@@ -260,23 +270,25 @@ class ProvHnxParser():
                     # to be implemented
                     label_func = lambda x:x
                     try:
-                        label = label_func(self.g.graph['name'])
+                        label = label_func(ping_data.g['name'])
                     except KeyError:
                         label = None
-                    print(f"Current file: {self.g.graph['name']}, current label: {label}")
+                    print(f"Current file: {ping_data.g['name']}, current label: {label}")
                     #assert 1==2
-                self.classmap[node_id_int] = label
+                ping_data.classmap[node_id_int] = label
     
-    def __parseEdge(self, edge, current_prov):
+    def __parseEdge(self, ping_data, edge, current_prov):
         # Get source vertex
         source_node = get_text_from_node(edge, "sourceID")
-        source_node = int(source_node.split("_")[-1]) #+ currentIdCount
+        source_node = int(source_node.split("_")[-1])
+        source_node = ping_data.idmap[source_node]
 
         # Get target vertex
         target_node = get_text_from_node(edge, "targetID")
-        target_node = int(target_node.split("_")[-1]) #+ currentIdCount
-
-        self.g.add_edge(source_node, target_node)
+        target_node = int(target_node.split("_")[-1])
+        target_node = ping_data.idmap[target_node]
+        
+        ping_data.g.add_edge(source_node, target_node)
 
         # Now it's time to randomly choose if the edge is going to be used for training, test or validation
         # We use 70% training, 20% test and 10% validation in our experiments, this can be changed in config.
@@ -288,39 +300,64 @@ class ProvHnxParser():
         # Iterate over the array 'edge_set' containing bool values for "test" and "val"
         for idx, value in edge_set.items():
             #print(G.graph['name'])
-            self.g.edges[source_node,target_node][idx] = value
+            ping_data.g.edges[source_node, target_node][idx] = value
     
-    def __parseXML(self, root, current_id_count=0, current_prov=0):
+    def __parseXML(self, ping_data, root, current_prov=0):
         #print(root)
         for element in root:
             """ TAG VERTICES """
             if (element.tag == "vertices"):
                 for vertex in element:
-                    self.__parseVertex(vertex, current_prov)
+                    self.__parseVertex(ping_data, vertex, current_prov)
                     
             # TAG EDGES
             elif (element.tag == "edges"):
                 for edge in element:
-                    self.__parseEdge(edge, current_prov)
+                    self.__parseEdge(ping_data, edge, current_prov)
 
     def parse(self):
-        attrib_name_list = self.data_config["attrib_name_list"]
-        current_id_count = 0
-        print(attrib_name_list)
-        for current_prov, root in enumerate(self.provs):
-            current_id_count = len(self.idmap)
-            print(current_id_count) 
-            self.__parseXML(root, current_id_count, current_prov)
-        for node_atb_set in self.node_atb_sets:
-            print(node_atb_set)
-        print(len(self.featmap))
-        for i, fmap in self.featmap.items():
-            print(f"{i}:{len(fmap)}")
+        if self.parse_configuration.kFoldGenerated:
+            if self.parse_configuration.onlyOneFile:
+                pass
+            else:
+                pass
+        else:
+            #Single file
+            if self.parse_configuration.onlyOneFile:
+                pass
+            #Multiple provenance graphs to be merged a single multigraph
+            elif self.parse_configuration.mergeGraphs:
+                ping_data = PingDataset()
+                for current_prov, root in enumerate(self.provs):
+                    self.__parseXML(ping_data, root, current_prov)
+                for node_atb_set in ping_data.node_atb_sets:
+                    print(node_atb_set)
+                print(len(ping_data.featmap))
+                for i, fmap in ping_data.featmap.items():
+                    print(f"{i}:{len(fmap)}")
+                self.dataset.append(ping_data)
+            #Multiple provenance graphs to be parsed individually
+            else:
+                for current_prov, root in enumerate(self.provs):
+                    ping_data = PingDataset()
+                    ping_data.g.graph["name"] = self.prov_names[current_prov]
+                    self.__parseXML(ping_data, root, current_prov)
+                    for node_atb_set in ping_data.node_atb_sets:
+                        print(node_atb_set)
+                    print(len(ping_data.featmap))
+                    for i, fmap in ping_data.featmap.items():
+                        print(f"{i}:{len(fmap)}")
+                    self.dataset.append(ping_data)
 
     def save(self):
-        output_prefix = None
-        if self.use_graph_name:
-            output_prefix = self.g.graph['name']
-        # Write output json Graph
         print("Writing Json Graph File")
-        self.graph_exporter.export(output_prefix, self)
+        for ping_dataset in self.dataset:
+            output_prefix = ping_dataset.g.graph['name'] if self.use_graph_name else None
+            ping_dataset.export(output_prefix, self.parse_config)
+            
+if __name__ == "__main__":
+    parse_config_input = json.load(open("configs/parse_ss_winprediction_config.json","r"))
+    data_config_input = json.load(open("config/smokesquad_config.json","r"))
+    parser = ProvHnxParser(parse_config_input, data_config_input, True)
+    parser.parse()
+    parser.save()
