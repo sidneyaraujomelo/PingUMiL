@@ -3,12 +3,14 @@ from collections import OrderedDict
 import random
 import json
 import os
+import pandas as pd
 from config.util import get_text_from_node, get_tag_values, get_attributes, loadProvenanceXML, loadProvenanceXMLList
 from config.config import get_ohv_for_attribute, find_node_with_tag, find_attribute_node_with_name
 from config.graph_splitter import NodeSplitter, EdgeSplitter
 from config.parse_configuration import ParseConfiguration
 from parsedgraphexporter import ParsedGraphExporter
 from pingumil.pingdataset import PingDataset
+from labelfuntions.labelfunction import create_label_function
 
 def writeAttributeToGraph(G, node_id, attrib_name, attrib_val, attrib_written_in_node=False):
     if (attrib_written_in_node == True):
@@ -123,7 +125,7 @@ class ProvHnxParser():
         self.build_ohv_representation_for_categoric_attributes(cat_attrib_list)
 
         print("One-hot-vector representations of every categoric attribute: ")
-        print(self.categoric_att_dict)
+        #print(self.categoric_att_dict)
     
     def __parseVertex(self, ping_data, vertex, current_prov):
         attrib_written_in_node = self.parse_config["attrib_written_in_node"]
@@ -268,13 +270,17 @@ class ProvHnxParser():
             if all_cond_satisf:
                 if label is None and label_attrib_name == 'function':
                     # to be implemented
-                    label_func = lambda x:x
+                    label_func = create_label_function(
+                        self.data_config["label_values"],
+                        self.data_config["label_csv_path"],
+                        self.data_config["label_col_identifier"],
+                        self.data_config["label_col_value"]
+                    )
                     try:
-                        label = label_func(ping_data.g['name'])
+                        label = label_func(ping_data.g.graph['name'])
                     except KeyError:
                         label = None
-                    print(f"Current file: {ping_data.g['name']}, current label: {label}")
-                    #assert 1==2
+                    print(f"Current file: {ping_data.g.graph['name']}, current label: {label}")
                 ping_data.classmap[node_id_int] = label
     
     def __parseEdge(self, ping_data, edge, current_prov):
@@ -342,11 +348,11 @@ class ProvHnxParser():
                     ping_data = PingDataset()
                     ping_data.g.graph["name"] = self.prov_names[current_prov]
                     self.__parseXML(ping_data, root, current_prov)
-                    for node_atb_set in ping_data.node_atb_sets:
-                        print(node_atb_set)
-                    print(len(ping_data.featmap))
-                    for i, fmap in ping_data.featmap.items():
-                        print(f"{i}:{len(fmap)}")
+                    #for node_atb_set in ping_data.node_atb_sets:
+                        #print(node_atb_set)
+                    #print(len(ping_data.featmap))
+                    #for i, fmap in ping_data.featmap.items():
+                    #    print(f"{i}:{len(fmap)}")
                     self.dataset.append(ping_data)
 
     def save(self):
@@ -356,8 +362,8 @@ class ProvHnxParser():
             ping_dataset.export(output_prefix, self.parse_config)
             
 if __name__ == "__main__":
-    parse_config_input = json.load(open("configs/parse_ss_winprediction_config.json","r"))
-    data_config_input = json.load(open("config/smokesquad_config.json","r"))
+    parse_config_input = json.load(open("configs/parse_ss_winprediction_config.json", "r"))
+    data_config_input = json.load(open("configs/data_smokesquad_winprediction_config.json", "r"))
     parser = ProvHnxParser(parse_config_input, data_config_input, True)
     parser.parse()
     parser.save()

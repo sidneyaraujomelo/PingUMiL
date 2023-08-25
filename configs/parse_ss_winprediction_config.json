@@ -7,7 +7,7 @@
     "includeNegativeEdges" : false,
     "leaveOneGraphOutOfTraining" : false,
     "inputfile" : "output 08.xml",
-    "input_prefix" : "/raid/home/smelo/smokesquadrondataset/replay experiment/",
+    "input_prefix" : ["/raid/home/smelo/smokesquadrondataset/replay experiment/", "/raid/home/smelo/smokesquadrondataset/original provenance graphs/"],
     "inputfiles": [],
     "ignorefiles": [],
     "extraedgesfiles": [],

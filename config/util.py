@@ -9,17 +9,32 @@ def loadProvenanceXML(file_path):
     e = ET.parse(file_path).getroot()
     return e
 
-def loadProvenanceXMLList(input_prefix, inputfiles, ignore_files=[]):
-    if (len(inputfiles)==0):
-        inputfiles = [f for f in os.listdir(input_prefix) if os.path.isfile(os.path.join(input_prefix,f)) and f.endswith('.xml') and f not in ignore_files]
-    inputfiles.sort()
-    print(inputfiles)
-    xmls = [ET.parse(input_prefix + filename).getroot() for filename in inputfiles]
-    return xmls, inputfiles
+def loadProvenanceXMLList(input_prefix, input_files, ignore_files=None):
+    if ignore_files is None:
+        ignore_files = []
+    # If no specific input file is given, we should read all files from input_prefix
+    if len(input_files) == 0:
+        if isinstance(input_prefix, list):
+            for input_prefix_folder in input_prefix:
+                all_files = [f for f in os.listdir(input_prefix_folder)
+                             if os.path.isfile(os.path.join(input_prefix_folder, f))]
+                new_input_files = [f for f in all_files
+                                   if f.endswith('.xml') and f not in ignore_files]
+                new_input_files = [os.path.join(input_prefix_folder, f) for f in new_input_files]
+                input_files = input_files + new_input_files
+        else:
+            input_files = [os.path.join(input_prefix_folder, f) for f in os.listdir(input_prefix)
+                          if os.path.isfile(os.path.join(input_prefix, f))
+                          and f.endswith('.xml') and f not in ignore_files]
+    input_files.sort()
+    print(input_files)
+    xmls = [ET.parse(filepath).getroot() for filepath in input_files]
+    input_files = [os.path.basename(x) for x in input_files]
+    return xmls, input_files
 
 def loadExtraEdgeFiles(input_prefix, extraedgesfiles):
     if (len(extraedgesfiles)==0):
-        extraedgesfiles = [f for f in os.listdir(input_prefix) if os.path.isfile(os.path.join(input_prefix,f)) and f.endswith('.txt')]
+        extraedgesfiles = [f for f in os.listdir(input_prefix) if os.path.isfile(os.path.join(input_prefix, f)) and f.endswith('.txt')]
     extraedgesfiles.sort()
     print(extraedgesfiles)
     edgefiles = [open(input_prefix + filename) for filename in extraedgesfiles]
