@@ -90,7 +90,7 @@ walk_length = 1
 num_neg_samples = 1
 sage_input_dim = 64
 
-# #update edge_index according to node_maps
+#update edge_index according to node_maps
 for graph_id, graph_data in dataset.items():
     dict_x2m = {}
     node_maps = graph_data["node_maps"]
@@ -137,7 +137,7 @@ sage_optimizer = torch.optim.Adam(sage_model.parameters(),
                                   lr=wandb.config.lr)
 #x = data.x.to(device)
 
-data_list = [graph_data["graph"] for graph_id, graph_data in dataset.items()]
+data_list = [graph_data["graph"] for _, graph_data in dataset.items()]
 loader = DataLoader(data_list, batch_size=batch_size)
 
 #torch.autograd.set_detect_anomaly(True)

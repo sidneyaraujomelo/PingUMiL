@@ -5,6 +5,7 @@ from pingumil.models.typeprojection import TypeProjection
 from pingumil.models.linkpredictor import LinkPredictor
 from pingumil.models.multiheadattention import MultiHeadAttention
 from pingumil.models.multilabel_classifier import MultilabelClassifier
+from pingumil.models.binary_classifier import BinaryClassifier
 
 def load_model(config):
     if config["model"] == "graphsage":
@@ -34,3 +35,6 @@ def load_model(config):
     if config["model"] == "multilabel_classification":
         del config["model"]
         return MultilabelClassifier(**config)
+    if config["model"] == "binary_classification":
+        del config["model"]
+        return BinaryClassifier(**config)

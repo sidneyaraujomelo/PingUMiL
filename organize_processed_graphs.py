@@ -1,6 +1,7 @@
 import os
 from glob import glob
 import re
+import shutil
 
 input_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_winprediction/Raw Data"
 output_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_winprediction/preprocessed_graphs"
@@ -15,4 +16,6 @@ for k in groups:
     if not os.path.exists(new_folder):
         os.mkdir(new_folder)
     for x in paths_dict[k]:
-        os.replace(x, os.path.join(new_folder, os.path.basename(x)))
+        print(x)
+        print(os.path.join(new_folder, os.path.basename(x)))
+        shutil.copyfile(x, os.path.join(new_folder, os.path.basename(x)))

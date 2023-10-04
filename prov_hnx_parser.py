@@ -12,9 +12,8 @@ from parsedgraphexporter import ParsedGraphExporter
 from pingumil.pingdataset import PingDataset
 from labelfuntions.labelfunction import create_label_function
 
-def writeAttributeToGraph(G, node_id, attrib_name, attrib_val, attrib_written_in_node=False):
-    if (attrib_written_in_node == True):
-        G.nodes[node_id][attrib_name] = attrib_val
+def writeAttributeToGraph(G, node_id, attrib_name, attrib_val):
+    G.nodes[node_id][attrib_name] = attrib_val
 
 class ProvHnxParser():
     def __init__(self, parse_config, data_config, use_graph_name=False, provs=None):
@@ -43,6 +42,13 @@ class ProvHnxParser():
         self.build_categoric_dictionary_for_list()
         self.node_splitter = NodeSplitter(**self.parse_config["node_split"])
         self.edge_splitter = EdgeSplitter(**self.parse_config["edge_split"])
+        if self.data_config["label_attrib_name"] == "function":
+            self.label_function = create_label_function(
+                self.data_config["label_values"],
+                self.data_config["label_csv_path"],
+                self.data_config["label_col_identifier"],
+                self.data_config["label_col_value"]
+            )
     
     def prepare_dictionaries(self):
         attrib_type_list = self.data_config["attrib_type_list"]
@@ -129,6 +135,7 @@ class ProvHnxParser():
     
     def __parseVertex(self, ping_data, vertex, current_prov):
         attrib_written_in_node = self.parse_config["attrib_written_in_node"]
+        tag_written_in_node = self.parse_config["tag_written_in_node"]
         attrib_type_list = self.data_config["attrib_type_list"]
         attrib_name_list = self.data_config["attrib_name_list"]
         tag_type_list = self.data_config["tag_type_list"]
@@ -169,18 +176,18 @@ class ProvHnxParser():
                     label = get_ohv_for_attribute(self.categoric_att_dict,
                                                   tag_name,
                                                   tag_value)
-                    writeAttributeToGraph(ping_data.g, node_id_int,
-                                          tag_name, tag_value, attrib_written_in_node)
+                    if tag_written_in_node:
+                        writeAttributeToGraph(ping_data.g, node_id_int,
+                                              tag_name, tag_value)
                 else:
                     default_value = tag_default_value_list[
                         tag_name_list.index(tag_name)]
                     label = get_ohv_for_attribute(self.categoric_att_dict,
                                                   tag_name,
                                                   default_value)
-                    writeAttributeToGraph(ping_data.g, node_id_int,
-                                            tag_name,
-                                            default_value,
-                                            attrib_written_in_node)
+                    if tag_written_in_node:
+                        writeAttributeToGraph(ping_data.g, node_id_int,
+                                              tag_name, default_value)
                 continue
             if (tag_type_list[idx] == 'numeric'):
                 if (tag_name in tag_val_dict):
@@ -188,15 +195,17 @@ class ProvHnxParser():
                         tag_val_dict[tag_name].replace(',', '.'))
                     feature_name.append(tag_name)
                     feature_values.append(tag_value)
-                    writeAttributeToGraph(ping_data.g, node_id_int,
-                                            tag_name, tag_value, attrib_written_in_node)
+                    if tag_written_in_node:
+                        writeAttributeToGraph(ping_data.g, node_id_int,
+                                              tag_name, tag_value)
             elif (tag_type_list[idx] == 'categoric'):
                 tag_value = tag_val_dict[tag_name]
                 onehotvectorrep = get_ohv_for_attribute(self.categoric_att_dict,
                                                         tag_name,
                                                         tag_value)
-                writeAttributeToGraph(ping_data.g, node_id_int,
-                                        tag_name, tag_value, attrib_written_in_node)
+                if tag_written_in_node:
+                    writeAttributeToGraph(ping_data.g, node_id_int,
+                                          tag_name, tag_value)
                 for i, x in enumerate(onehotvectorrep):
                     feature_values.append(float(x))  
                     feature_name.append(f"{tag_name}_{i}")
@@ -209,9 +218,9 @@ class ProvHnxParser():
                 label = get_ohv_for_attribute(self.categoric_att_dict,
                                               label_attrib_name,
                                               attrib_value)
-                writeAttributeToGraph(ping_data.g, node_id_int,
-                                        label_attrib_name,
-                                        attrib_value, attrib_written_in_node)
+                if attrib_written_in_node:
+                    writeAttributeToGraph(ping_data.g, node_id_int,
+                                          label_attrib_name, attrib_value)
                 continue
             if (attrib_type_list[idx] == 'numeric'):
                 if (attrib_name in attrib_val_dict):
@@ -219,8 +228,9 @@ class ProvHnxParser():
                         attrib_val_dict[attrib_name].replace(',', '.'))
                     feature_values.append(attrib_value)
                     feature_name.append(attrib_name)
-                    writeAttributeToGraph(ping_data.g, node_id_int,
-                                            attrib_name, attrib_value, attrib_written_in_node)
+                    if attrib_written_in_node:
+                        writeAttributeToGraph(ping_data.g, node_id_int,
+                                              label_attrib_name, attrib_value)
                 #else:
                 #    features.append(attrib_default_value_list[idx])
                 #    writeAttributeToGraph(G, node_id_int, attrib_name, attrib_default_value_list[idx])
@@ -231,8 +241,9 @@ class ProvHnxParser():
                     onehotvectorrep = get_ohv_for_attribute(self.categoric_att_dict,
                                                             attrib_name,
                                                             attrib_value)
-                    writeAttributeToGraph(ping_data.g, node_id_int,
-                                            attrib_name, attrib_value, attrib_written_in_node)
+                    if attrib_written_in_node:
+                        writeAttributeToGraph(ping_data.g, node_id_int,
+                                            label_attrib_name, attrib_value)
                 #else:
                     #print(attrib_default_value_list)
                     #onehotvectorrep = get_ohv_for_attribute(attrib_name, attrib_default_value_list[idx])
@@ -262,22 +273,15 @@ class ProvHnxParser():
             all_cond_satisf = True
             for k, v in label_conditions.items():
                 if k in tag_name_list:
-                    if tag_val_dict[k] != v:
+                    if ((isinstance(v, list) and tag_val_dict[k] not in v) and (tag_val_dict[k] != v)):
                         all_cond_satisf = False
                 elif k in attrib_name_list:
-                    if attrib_val_dict[k] != v:
+                    if ((isinstance(v, list) and attrib_val_dict[k] not in v) and (attrib_val_dict[k] != v)):
                         all_cond_satisf = False
             if all_cond_satisf:
                 if label is None and label_attrib_name == 'function':
-                    # to be implemented
-                    label_func = create_label_function(
-                        self.data_config["label_values"],
-                        self.data_config["label_csv_path"],
-                        self.data_config["label_col_identifier"],
-                        self.data_config["label_col_value"]
-                    )
                     try:
-                        label = label_func(ping_data.g.graph['name'])
+                        label = self.label_function(ping_data.g.graph['name'])
                     except KeyError:
                         label = None
                     print(f"Current file: {ping_data.g.graph['name']}, current label: {label}")

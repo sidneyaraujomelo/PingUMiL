@@ -18,9 +18,9 @@
     "tag_default_value_list" : ["inexistent","inexistent", 0],
     "label_attrib_name" : "function",
     "label_attrib_type" : "categoric",
-    "label_conditions" : { "type":"Agent", "label":"Player"},
+    "label_conditions" : { "type":"Agent", "label":["Player01", "Player02"]},
     "label_csv_path" : "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_winprediction/match2label.csv",
-    "label_values": ["player01", "player02"],
+    "label_values": ["Player01", "Player02"],
     "label_col_identifier": "Source",
     "label_col_value" : "winner"
 }

@@ -13,6 +13,6 @@ def create_label_function(labels, label_df_path, identifier_col, class_col):
     for _, row in label_df.iterrows():
         identifier = row[identifier_col]
         row_label = row[class_col]
-        identifier2label[identifier] = category_function(row_label)
+        identifier2label[identifier] = category_function([row_label])
     label_func = lambda x: identifier2label[x]
     return label_func
