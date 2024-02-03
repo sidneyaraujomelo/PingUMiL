@@ -12,7 +12,7 @@ from sklearn.metrics import (accuracy_score, precision_score,
                              recall_score, f1_score, hamming_loss,
                              classification_report)
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import LeaveOneOut, StratifiedKFold
+from sklearn.model_selection import LeaveOneOut, StratifiedKFold, train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
 import pandas as pd
 from pingumil.util.util import generate_class_weights
@@ -170,7 +170,7 @@ class SSWinPredBaseExperiment():
           
     def classification_step(self, device, model, x, y, graph_ids, current_timestamp, wandb):
         self.log(f"Classification Model: {model}")
-        average_metrics = { k : [] for k in ["train_loss", "p", "r", "f1", "test_loss"] }
+        average_metrics = { k : [] for k in ["train_loss", "p", "r", "f1", "test_loss", "acc"] }
         
         best_predicts = {}
         output_dict = {}
@@ -179,19 +179,20 @@ class SSWinPredBaseExperiment():
         output_dict["true"] = []
         output_dict["timestamp"] = []
         
-        skf = StratifiedKFold(n_splits=3)
+        skf = StratifiedKFold(n_splits=10)
         for train_index, test_index in skf.split(x, y):
             early_stopping = self.get_early_stopping(patience=self.patience,
                                                  verbose=True,
                                                  prefix="predictor")
             model.reset_parameters()
             optimizer = torch.optim.Adam(
-                model.parameters(), lr=wandb.config.lr_clf)
+                model.parameters(), lr=wandb.config.lr_clf, weight_decay=wandb.config.weight_decay)
             test_graph_ids = [graph_ids[x] for x in test_index]
             best_metrics = {
                 "train_loss": np.inf,
                 "p": 0,
-                "r": 0
+                "r": 0,
+                "acc": 0
             }
             for test_graph_id in test_graph_ids:
                 best_predicts[test_graph_id] = None
@@ -234,20 +235,23 @@ class SSWinPredBaseExperiment():
                 
                 p = precision_score(np_y_pred_test,
                                     np_y_test,
-                                    average="binary")
+                                    average="macro")
                 r = recall_score(np_y_pred_test,
                                  np_y_test,
-                                 average="binary")
+                                 average="macro")
                 f1 = f1_score(np_y_pred_test,
                               np_y_test,
-                              average="binary")
+                              average="macro")
                 
                 train_acc = accuracy_score(np_y_pred_train,
                                            np_y_train)
+                test_acc = accuracy_score(np_y_pred_test,
+                                           np_y_test)
                 wandb.log({
                     f"train cls loss" : train_loss.item(),
                     f"test cls loss": test_loss.item(),
                     f"train acc" : train_acc,
+                    f"test acc": test_acc,
                     f"weighted_p" : p,
                     f"weighted_r" : r,
                     f"weighted_f1" : f1
@@ -259,6 +263,7 @@ class SSWinPredBaseExperiment():
                     best_metrics["p"] = p
                     best_metrics["f1"] = f1
                     best_metrics["test_loss"] = test_loss.cpu().item()
+                    best_metrics["acc"] = test_acc
                     for k, index in enumerate(test_index):
                         best_predicts[graph_ids[index]] = (y_pred_test.cpu().detach().tolist()[k],
                                                           y_test.cpu().detach().tolist()[k])
@@ -289,6 +294,157 @@ class SSWinPredBaseExperiment():
         output_df.to_csv(results_path, index=False)
         self.finish()
 
+    def classification_step_tvt(self, device, model, x, y, graph_ids, current_timestamp, wandb):
+        self.log(f"Classification Model: {model}")
+        average_metrics = { k : [] for k in ["train_loss", "p", "r", "f1", "val_loss", "acc"] }
+        
+        output_test_dict = {
+            "fold" : [],
+            "timestamp" : [],
+            "accuracy_test" : [],
+            "precision_test" : [],
+            "recall_test" : [],
+            "f1_test" : [],
+        }
+        
+        kf_train_val = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+        for test_fold, (train_val_index, test_index) in enumerate(kf_train_val.split(x, y)):
+            x_trainval, y_trainval = x[train_val_index], y[train_val_index]
+            x_test, y_test = x[test_index], y[test_index]
+        
+            skf = StratifiedKFold(n_splits=9)
+            best_model = None
+            best_metrics = {
+                "train_loss": np.inf,
+                "p": 0,
+                "r": 0,
+                "acc": 0,
+                "f1": 0
+            }
+            for train_index, val_index in skf.split(x_trainval, y_trainval):
+                early_stopping = self.get_early_stopping(patience=self.patience,
+                                                    verbose=True,
+                                                    prefix="predictor")
+                model.reset_parameters()
+                optimizer = torch.optim.Adam(
+                    model.parameters(), lr=wandb.config.lr_clf, weight_decay=wandb.config.weight_decay)
+
+                for _ in range(1, self.cls_epochs):
+                    x_train, x_val = x[train_index], x[val_index]
+                    y_train, y_val = y[train_index], y[val_index]
+                    
+                    x_train = x_train.to(device)
+                    x_val = x_val.to(device)
+                    y_train = y_train.view(-1, 1).to(device)
+                    y_val = y_val.view(-1, 1).to(device)
+                    
+                    model.train()
+                    optimizer.zero_grad()
+                    
+                    y_hat = model(x_train, sigmoid=False)
+                    
+                    #y_train_weight = torch.Tensor(generate_class_weights(y_train)).to(device)
+                    
+                    #train_loss = F.binary_cross_entropy_with_logits(y_hat, y_train,
+                    #                                                pos_weight=y_train_weight)
+                    train_loss = F.binary_cross_entropy_with_logits(y_hat, y_train)
+                    y_pred_train = torch.round(torch.sigmoid(y_hat))
+                    
+                    train_loss.backward()
+                    optimizer.step()
+                    
+                    model.eval()
+                    y_hat_val = model(x_val, sigmoid=False)
+                    val_loss = F.binary_cross_entropy_with_logits(y_hat_val, y_val)
+                    y_pred_val = torch.round(torch.sigmoid(y_hat_val))
+                    
+                    #print(f"{epoch}: Train loss: {train_loss.item()}")
+                    #print(f"{epoch}: Test loss: {val_loss.item()}")
+                    #Detaching all tensors
+                    np_y_val = y_val.cpu().detach().numpy()
+                    np_y_pred_val = y_pred_val.cpu().detach().numpy()
+                    np_y_train = y_train.cpu().detach().numpy()
+                    np_y_pred_train = y_pred_train.cpu().detach().numpy()
+                    
+                    val_p = precision_score(np_y_pred_val,
+                                        np_y_val,
+                                        average="macro")
+                    val_r = recall_score(np_y_pred_val,
+                                    np_y_val,
+                                    average="macro")
+                    val_f1 = f1_score(np_y_pred_val,
+                                np_y_val,
+                                average="macro")
+                    
+                    train_acc = accuracy_score(np_y_pred_train,
+                                            np_y_train)
+                    val_acc = accuracy_score(np_y_pred_val,
+                                            np_y_val)
+                    wandb.log({
+                        f"train cls loss" : train_loss.item(),
+                        f"val cls loss": val_loss.item(),
+                        f"train acc" : train_acc,
+                        f"val acc": val_acc,
+                        f"val_p" : val_p,
+                        f"val_r" : val_r,
+                        f"val_f1" : val_f1
+                    })
+                                    
+                    if (val_f1 > best_metrics["f1"]):
+                        best_metrics["train_loss"] = train_loss.cpu().item()
+                        best_metrics["r"] = val_r
+                        best_metrics["p"] = val_p
+                        best_metrics["f1"] = val_f1
+                        best_metrics["val_loss"] = val_loss.cpu().item()
+                        best_metrics["acc"] = val_acc
+                        best_model = model.state_dict()
+
+                    early_stopping(train_loss, model)
+                    if early_stopping.early_stop:
+                        print("Early Stopping!")
+                        break
+            model.load_state_dict(best_model)
+            model.eval()
+            
+            x_test = x_test.to(device)
+            y_test = y_test.view(-1, 1).to(device)
+                    
+            y_hat_test = model(x_test, sigmoid=False)
+            test_loss = F.binary_cross_entropy_with_logits(y_hat_test, y_test)
+            y_pred_test = torch.round(torch.sigmoid(y_hat_test))
+            np_y_test = y_test.cpu().detach().numpy()
+            np_y_pred_test = y_pred_test.cpu().detach().numpy()
+                    
+            p = precision_score(np_y_pred_test,
+                                np_y_test,
+                                average="macro")
+            r = recall_score(np_y_pred_test,
+                                np_y_test,
+                                average="macro")
+            f1 = f1_score(np_y_pred_test,
+                            np_y_test,
+                            average="macro") 
+            test_acc = accuracy_score(np_y_pred_test,
+                                        np_y_test)
+            
+            output_test_dict["fold"].append(test_fold)
+            output_test_dict["timestamp"].append(current_timestamp)
+            output_test_dict["accuracy_test"].append(test_acc)
+            output_test_dict["precision_test"].append(p)
+            output_test_dict["recall_test"].append(r)
+            output_test_dict["f1_test"].append(f1)
+            wandb.log({
+                "p_test": p,
+                "r_test" : r,
+                "f1_test" : f1,
+                "test_acc" : test_acc
+            })
+        self.log(f"timestamp: {current_timestamp}")
+        output_df = pd.DataFrame.from_dict(output_test_dict)
+        results_path = os.path.join(self.log_folder, f"results.csv")
+        output_df.to_csv(results_path, index=False)
+        self.finish()
+        
 if __name__ ==  "__main__":
     k = SSWinPredBaseExperiment()
     dataset = k.read_data()

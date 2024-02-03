@@ -3,8 +3,8 @@ from glob import glob
 import re
 import shutil
 
-input_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_winprediction/Raw Data"
-output_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_winprediction/preprocessed_graphs"
+input_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_wp_playeractivity/Raw Data"
+output_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_wp_playeractivity/preprocessed_graphs"
 paths = glob(f"{input_path}/*")
 files = [os.path.basename(x) for x in paths]
 groups = [re.search(r"(winpred.*xml)", x)[0] for x in files]
@@ -14,7 +14,7 @@ for k in groups:
     paths_dict[k] = [x for x in paths if k in x]
     new_folder = os.path.join(output_path, os.path.splitext(k)[0])
     if not os.path.exists(new_folder):
-        os.mkdir(new_folder)
+        os.makedirs(new_folder)
     for x in paths_dict[k]:
         print(x)
         print(os.path.join(new_folder, os.path.basename(x)))

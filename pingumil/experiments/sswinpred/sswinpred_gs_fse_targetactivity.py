@@ -23,8 +23,8 @@ import wandb
 import time
 
 current_timestamp = 20
-project_name = "winpred_binary"
-group_name = "gs_128_high_cls_epochs_10foldval"
+project_name = "winpred_binary_activity"
+group_name = "gs_macro_high_cls_epochs_t8v1t1_valonf1"
 wandb_config = {
     "batch_size" : 1024,
     "lr": 1e-3,
@@ -36,16 +36,18 @@ wandb_config = {
 }
 
 #wandb stuff
-run = wandb.init(project="winpred_binary", group=group_name,
+run = wandb.init(project=project_name, group=group_name,
                  config=wandb_config)
 
-experiment = SSWinPredBaseExperiment(experiment_tag=group_name,
-                               epochs=1000,
-                               cls_epochs=1000,
-                               timestamp=time.time(),
-                               patience=10,
-                               wandb=wandb,
-                               override_data=False)
+experiment = SSWinPredBaseExperiment(
+    dataset_folder="/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_wp_playeractivity/preprocessed_graphs",
+    experiment_tag=project_name+"_"+group_name,
+    epochs=1000,
+    cls_epochs=1000,
+    timestamp=time.time(),
+    patience=10,
+    wandb=wandb,
+    override_data=False)
 print(experiment.output_file)
 #Read all necessary data
 dataset = experiment.read_data()
@@ -124,7 +126,7 @@ for graph_id, graph_data in dataset.items():
     data.x = node_feats
     dim_types = [data.x.shape[-1]]
     data.node_map = [0]
-    data.class_map = graph_data["class_map"]
+    #data.class_map = graph_data["class_map"]
     graph_data["graph"] = data
     dataset[graph_id]["dict_m2x"] = dict_m2x
     dataset[graph_id]["dim_types"] = dim_types
@@ -266,8 +268,8 @@ while current_timestamp < max_timestamp:
         filtered_edge_index = edge_index[:, filtered_indices]
         graph_data["graph"].filtered_edge_index = filtered_edge_index.cpu()
 
-        #create the data object to be added to data_list
-        data_list = [graph_data["graph"] for _, graph_data in dataset.items()]
+    #create the data object to be added to data_list
+    data_list = [graph_data["graph"] for _, graph_data in dataset.items()]
 
     #Prepare training routine
     loader = DataLoader(data_list, batch_size=batch_size)
@@ -313,7 +315,13 @@ while current_timestamp < max_timestamp:
     groups = []
     for graph_id, graph_entry in dataset.items():
         graph_data = graph_entry["graph"]
-        if None in graph_data.class_map.values():
+        graph_dm2x = graph_entry["dict_m2x"]
+        node_dates = graph_data.date
+        current_ts_node_idx = torch.nonzero(node_dates < current_timestamp).squeeze()
+        current_ts_nodes = [graph_dm2x[x] for x in current_ts_node_idx.tolist()]
+        # Convert the list of nodes to a set for faster membership checking
+        node_set = set(current_ts_nodes)
+        if None in graph_entry["class_map"].values():
             continue
         data = graph_data.to(device)
         x_p = typeproj_model([data.x], [0])
@@ -323,11 +331,30 @@ while current_timestamp < max_timestamp:
             num_workers=0)
         z = sage_model.inference(x_p, subgraph_loader, device).detach()
         z = z.to(device)
-        graph_dm2x = graph_entry["dict_m2x"]
-        player_node_idxs = list(graph_data.class_map.keys())
-        player_node_zs = [z[graph_dm2x[int(x)]] for x in player_node_idxs]
+        # Get the target player nodes for Player01 and Player02
+        target_node_idxs = list(graph_entry["class_map"].keys())
+        target_node_idxs = [graph_dm2x[int(x)] for x in target_node_idxs]
+        target_node_idxs = [x for x in target_node_idxs if x in node_set]
+        assert len(target_node_idxs) > 1
+        
+        player_node_idxs = []
+        # Get player node Player01
+        target_p1_node_idxs = [(x, graph_data.date[x]) for x in target_node_idxs if graph_data.ObjectTag[x] == "Player01"]
+        target_p1_node_idxs.sort(key=lambda x: x[1], reverse=True)
+        target_p1_node_idx = target_p1_node_idxs[0][0]
+        player_node_idxs.append(target_p1_node_idx)
+        
+        # Get player node Player02
+        target_p2_node_idxs = [(x, graph_data.date[x]) for x in target_node_idxs if graph_data.ObjectTag[x] == "Player02"]
+        target_p2_node_idxs.sort(key=lambda x: x[1], reverse=True)
+        target_p2_node_idx = target_p2_node_idxs[0][0]
+        player_node_idxs.append(target_p2_node_idx)
+        
+        experiment.log(f"Ts: {current_timestamp}, Graph: {graph_id}, target node ids: {player_node_idxs}")
+        
+        player_node_zs = [z[x] for x in player_node_idxs]
         x_multi = x_multi + [torch.cat(player_node_zs)]
-        y_multi.append(list(graph_data.class_map.values())[0][0])
+        y_multi.append(list(graph_entry["class_map"].values())[0][0])
 
     x_multi = torch.stack(x_multi)
     print(x_multi.size())
@@ -342,7 +369,7 @@ while current_timestamp < max_timestamp:
 
     experiment.log(f"Classification Model: {classification_model}\n")
 
-    experiment.classification_step(device, classification_model,
+    experiment.classification_step_tvt(device, classification_model,
                                    x_multi, y_multi, list(dataset.keys()),
                                    current_timestamp, wandb)
     # Increment timestamp
@@ -353,6 +380,6 @@ while current_timestamp < max_timestamp:
     run.finish()
     
     wandb_config["current_timestamp"] = current_timestamp
-    run = run = wandb.init(project="winpred_binary", group=group_name,
+    run = run = wandb.init(project=project_name, group=group_name,
                  config=wandb_config)
     experiment.reset(wandb)

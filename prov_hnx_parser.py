@@ -12,8 +12,12 @@ from parsedgraphexporter import ParsedGraphExporter
 from pingumil.pingdataset import PingDataset
 from labelfuntions.labelfunction import create_label_function
 
-def writeAttributeToGraph(G, node_id, attrib_name, attrib_val):
-    G.nodes[node_id][attrib_name] = attrib_val
+def writeAttributeToGraph(G, attrib_written_in_node, node_id, attrib_name, attrib_val):
+    if isinstance(attrib_written_in_node, list):
+        if attrib_name in attrib_written_in_node:
+            G.nodes[node_id][attrib_name] = attrib_val
+    elif attrib_written_in_node:
+        G.nodes[node_id][attrib_name] = attrib_val
 
 class ProvHnxParser():
     def __init__(self, parse_config, data_config, use_graph_name=False, provs=None):
@@ -176,18 +180,17 @@ class ProvHnxParser():
                     label = get_ohv_for_attribute(self.categoric_att_dict,
                                                   tag_name,
                                                   tag_value)
-                    if tag_written_in_node:
-                        writeAttributeToGraph(ping_data.g, node_id_int,
-                                              tag_name, tag_value)
+                    
+                    writeAttributeToGraph(ping_data.g, tag_written_in_node, node_id_int,
+                                            tag_name, tag_value)
                 else:
                     default_value = tag_default_value_list[
                         tag_name_list.index(tag_name)]
                     label = get_ohv_for_attribute(self.categoric_att_dict,
                                                   tag_name,
                                                   default_value)
-                    if tag_written_in_node:
-                        writeAttributeToGraph(ping_data.g, node_id_int,
-                                              tag_name, default_value)
+                    writeAttributeToGraph(ping_data.g, tag_written_in_node, node_id_int,
+                                            tag_name, default_value)
                 continue
             if (tag_type_list[idx] == 'numeric'):
                 if (tag_name in tag_val_dict):
@@ -195,17 +198,15 @@ class ProvHnxParser():
                         tag_val_dict[tag_name].replace(',', '.'))
                     feature_name.append(tag_name)
                     feature_values.append(tag_value)
-                    if tag_written_in_node:
-                        writeAttributeToGraph(ping_data.g, node_id_int,
-                                              tag_name, tag_value)
+                    writeAttributeToGraph(ping_data.g, tag_written_in_node, node_id_int,
+                                            tag_name, tag_value)
             elif (tag_type_list[idx] == 'categoric'):
                 tag_value = tag_val_dict[tag_name]
                 onehotvectorrep = get_ohv_for_attribute(self.categoric_att_dict,
                                                         tag_name,
                                                         tag_value)
-                if tag_written_in_node:
-                    writeAttributeToGraph(ping_data.g, node_id_int,
-                                          tag_name, tag_value)
+                writeAttributeToGraph(ping_data.g, tag_written_in_node, node_id_int,
+                                            tag_name, tag_value)
                 for i, x in enumerate(onehotvectorrep):
                     feature_values.append(float(x))  
                     feature_name.append(f"{tag_name}_{i}")
@@ -218,8 +219,7 @@ class ProvHnxParser():
                 label = get_ohv_for_attribute(self.categoric_att_dict,
                                               label_attrib_name,
                                               attrib_value)
-                if attrib_written_in_node:
-                    writeAttributeToGraph(ping_data.g, node_id_int,
+                writeAttributeToGraph(ping_data.g, attrib_written_in_node, node_id_int,
                                           label_attrib_name, attrib_value)
                 continue
             if (attrib_type_list[idx] == 'numeric'):
@@ -228,9 +228,8 @@ class ProvHnxParser():
                         attrib_val_dict[attrib_name].replace(',', '.'))
                     feature_values.append(attrib_value)
                     feature_name.append(attrib_name)
-                    if attrib_written_in_node:
-                        writeAttributeToGraph(ping_data.g, node_id_int,
-                                              label_attrib_name, attrib_value)
+                    writeAttributeToGraph(ping_data.g, attrib_written_in_node, node_id_int,
+                                          attrib_name, attrib_value)
                 #else:
                 #    features.append(attrib_default_value_list[idx])
                 #    writeAttributeToGraph(G, node_id_int, attrib_name, attrib_default_value_list[idx])
@@ -241,9 +240,8 @@ class ProvHnxParser():
                     onehotvectorrep = get_ohv_for_attribute(self.categoric_att_dict,
                                                             attrib_name,
                                                             attrib_value)
-                    if attrib_written_in_node:
-                        writeAttributeToGraph(ping_data.g, node_id_int,
-                                            label_attrib_name, attrib_value)
+                    writeAttributeToGraph(ping_data.g, attrib_written_in_node, node_id_int,
+                                          attrib_name, attrib_value)
                 #else:
                     #print(attrib_default_value_list)
                     #onehotvectorrep = get_ohv_for_attribute(attrib_name, attrib_default_value_list[idx])
@@ -366,8 +364,8 @@ class ProvHnxParser():
             ping_dataset.export(output_prefix, self.parse_config)
             
 if __name__ == "__main__":
-    parse_config_input = json.load(open("configs/parse_ss_winprediction_config.json", "r"))
-    data_config_input = json.load(open("configs/data_smokesquad_winprediction_config.json", "r"))
+    parse_config_input = json.load(open("configs/parse_ss_winprediction_playeractivity_config.json", "r"))
+    data_config_input = json.load(open("configs/data_smokesquad_winprediction_playeractivity_config.json", "r"))
     parser = ProvHnxParser(parse_config_input, data_config_input, True)
     parser.parse()
     parser.save()
