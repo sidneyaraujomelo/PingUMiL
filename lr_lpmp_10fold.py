@@ -1,6 +1,5 @@
-from pyts.classification import BOSSVS
 from pyts.multivariate.classification import MultivariateClassifier
-from lightgbm import LGBMClassifier
+from sklearn.linear_model import RidgeClassifier
 from sklearn.model_selection import train_test_split
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold, ParameterGrid, StratifiedKFold
@@ -78,7 +77,7 @@ for source in unique_sources:
     y.append(source_subset.loc[source_subset.index[0],class_column])
 assert len(data_index) == len(y)
 
-parameters = {'n_estimators': [10, 50, 100], 'num_leaves': [5, 10, 20], 'objective': ['binary']}
+parameters = {'alpha': [1, 0.1, 0.01]}
 
 experiment_control_dict = create_output_dict()
 output_dict = create_output_dict()
@@ -110,8 +109,8 @@ for timestamp in unique_timestamps:
             X_train, y_train = [X[i] for i in train_index], [y[i] for i in train_index]
             X_val, y_val = [X[i] for i in val_index], [y[i] for i in val_index]
             for param in list(ParameterGrid(parameters)):
-                base_clf = LGBMClassifier(**param, verbose=-1)
-                clf = MultivariateClassifier(base_clf)
+                lr_ridge = RidgeClassifier(**param)
+                clf = MultivariateClassifier(lr_ridge)
                 clf.fit(X_train, y_train)
                 y_train_hat = clf.predict(X_train)
                 y_val_hat = clf.predict(X_val)
@@ -132,7 +131,7 @@ for timestamp in unique_timestamps:
         )
     
 experiment_df = pd.DataFrame.from_dict(experiment_control_dict)
-output_base_filename = "lgb_sk10f"
+output_base_filename = "lr_sk10f"
 if ADD_CLUSTER:
     experiment_df.to_csv(f"{output_base_filename}_{base_clustering}k{num_clusters}_trainval.csv")
 else:
@@ -182,7 +181,7 @@ for timestamp in unique_timestamps:
             X_train, y_train = [X[i] for i in train_index], [y[i] for i in train_index]
             X_val, y_val = [X[i] for i in val_index], [y[i] for i in val_index]
             for param in list(ParameterGrid(parameters)):
-                base_clf = LGBMClassifier(**param, verbose=-1)
+                base_clf = RidgeClassifier(**param)
                 clf = MultivariateClassifier(base_clf)
                 clf.fit(X_train, y_train)
                 y_train_hat = clf.predict(X_train)
