@@ -31,6 +31,9 @@ def general_statistics_preprocessed(input_path):
           Edges: {num_edges}
           Average edge per graph: {num_edges/num_graphs}
           """)
+    
+def innertext(tag):
+  return (tag.text or '') + ''.join(innertext(e) for e in tag) + (tag.tail or '')
 
 def general_statistics_xml(input_path):
     if os.path.isfile(input_path):
@@ -40,12 +43,18 @@ def general_statistics_xml(input_path):
     num_graphs = len(filenames)
     num_nodes = 0
     num_edges = 0
+    game_durations = []
     for filename in tqdm(filenames):
         tree = ET.parse(os.path.join(input_path, filename))
         root = tree.getroot()
         for element in root:
             if element.tag == "vertices":
                 num_nodes = num_nodes + len(element)
+                first_node = element[0]
+                first_t = float(get_text_from_node(first_node, "date").replace(',','.'))
+                last_node = element[-1]
+                last_t = float(get_text_from_node(last_node, "date").replace(',','.'))
+                game_durations.append(last_t-first_t)
             elif element.tag == "edges":
                 num_edges = num_edges + len(element)
             else:
@@ -56,6 +65,7 @@ def general_statistics_xml(input_path):
           Nodes: {num_nodes}
           Edges: {num_edges}
           Average edge per graph: {num_edges/num_graphs}
+          Average duration: {sum(game_durations)/num_graphs}
           """)
 
 def getPingUMiLEdgeTypes(tree):

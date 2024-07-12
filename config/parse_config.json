@@ -34,5 +34,6 @@
         "val_dict" : {"test_removed": false, "train_removed": true}
     },
     "directed" : false,
-    "attrib_written_in_node": true
+    "attrib_written_in_node": true,
+    "tag_written_in_node": true
 }

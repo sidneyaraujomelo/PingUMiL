@@ -146,7 +146,7 @@ class ProvHnxParser():
         tag_name_list = self.data_config["tag_name_list"]
         tag_default_value_list = self.data_config["tag_default_value_list"]
         label_attrib_name = self.data_config["label_attrib_name"]
-        label_conditions = self.data_config["label_conditions"]
+        label_conditions = self.data_config.get("label_conditions",None)
 
         """ VERTEX ID """
         node_id = get_text_from_node(vertex, "ID")
@@ -364,8 +364,8 @@ class ProvHnxParser():
             ping_dataset.export(output_prefix, self.parse_config)
             
 if __name__ == "__main__":
-    parse_config_input = json.load(open("configs/parse_ss_winprediction_playeractivity_config.json", "r"))
-    data_config_input = json.load(open("configs/data_smokesquad_winprediction_playeractivity_config.json", "r"))
+    parse_config_input = json.load(open("configs/parse_ss_hitprediction_config.json", "r"))
+    data_config_input = json.load(open("configs/data_smokesquad_hitprediction_config.json", "r"))
     parser = ProvHnxParser(parse_config_input, data_config_input, True)
     parser.parse()
     parser.save()
