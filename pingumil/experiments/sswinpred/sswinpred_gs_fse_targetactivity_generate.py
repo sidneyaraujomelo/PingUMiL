@@ -30,7 +30,7 @@ wandb_config = {
     "batch_size" : 1024,
     "lr": 1e-4,
     "lr_clf" : 1e-4,
-    "weight_decay": 1e-5,
+    "weight_decay": 1e-4,
     "weight_decay_clf": 1e-4,
     "gnn": "gs",
     "current_timestamp" : current_timestamp
@@ -43,10 +43,10 @@ run = wandb.init(project=project_name, group=group_name,
 experiment = SSWinPredBaseExperiment(
     dataset_folder="/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_wp_playeractivity/preprocessed_graphs",
     experiment_tag=project_name+"_"+group_name,
-    epochs=500,
+    epochs=1000,
     cls_epochs=1000,
     timestamp=time.time(),
-    patience=10,
+    patience=100,
     wandb=wandb,
     override_data=False)
 print(experiment.output_file)

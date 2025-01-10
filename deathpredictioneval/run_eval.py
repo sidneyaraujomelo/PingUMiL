@@ -251,8 +251,8 @@ def run(model_name, add_cluster=False, num_clusters=5, base_clustering="kmeans",
 
     match_column = "source"
     timestamp_column = "timestamp"
-    class_columns = ["hasdeathplayer01", "hasdeathplayer02"]
-    ignore_columns = ["deathplayer01", "deathplayer02","winner"]
+    class_columns = ["willdieplayer01", "willdieplayer02"]
+    ignore_columns = ["node_idxplayer01", "node_idxplayer02"]
     non_data_columns = [match_column, timestamp_column]+class_columns+ignore_columns
     
     train_df = pd.read_csv("/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_deathprediction/deathprediction_dataset_5s_train.csv", index_col=0)

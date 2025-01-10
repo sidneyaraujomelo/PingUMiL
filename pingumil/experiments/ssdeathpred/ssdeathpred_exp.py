@@ -208,9 +208,9 @@ class SSDeathPredBaseExperiment():
             output_dict[f"f1_{set_name}"].append(f1)
         return output_dict
     
-    def split_train_df(self, n_splits=9):
+    def split_train_df(self, n_splits=9, class_name="class"):
         gss_train_val = GroupShuffleSplit(n_splits=n_splits, train_size=.7, random_state=43)
-        return gss_train_val.split(self.train_df.index, self.train_df["class"], self.train_df["source"])
+        return gss_train_val.split(self.train_df.index, self.train_df[class_name], self.train_df["source"])
           
     def classification_step(self, device, model, X_trainval, y_trainval, groups_trainval,
                             X_test, y_test, X_test_idx, groups_test, wandb):
@@ -351,6 +351,16 @@ class SSDeathPredBaseExperiment():
             "index" : index,
             "source": source,
             "y": y,
+            "y_hat" : y_hat
+        }
+        return pred_dict
+    
+    def create_prediction_dict(self, index, source, y, y_log, y_hat):
+        pred_dict = {
+            "index" : index,
+            "source": source,
+            "y": y,
+            "y_log": y_log,
             "y_hat" : y_hat
         }
         return pred_dict
@@ -505,6 +515,30 @@ class SSDeathPredBaseExperiment():
         results_path = os.path.join(self.log_folder, f"results.csv")
         output_df.to_csv(results_path, index=False)
         self.finish()
+        
+    def output_pred_dicts(self, test_pred_dicts):
+        test_pred_dict_p1 = {}
+        test_pred_dict_p2 = {}
+        for test_pred_dict_pair in test_pred_dicts:
+            for key,value in test_pred_dict_pair[0].items():
+                if key not in test_pred_dict_p1:
+                    test_pred_dict_p1[key] = list(value)
+                else:
+                    test_pred_dict_p1[key] += list(value)
+            for key,value in test_pred_dict_pair[1].items():
+                if key not in test_pred_dict_p2:
+                    test_pred_dict_p2[key] = list(value)
+                else:
+                    test_pred_dict_p2[key] += list(value)
+
+        test_pred_p1 = pd.DataFrame.from_dict(test_pred_dict_p1)
+        test_pred_p2 = pd.DataFrame.from_dict(test_pred_dict_p2)
+        
+        results_path_p1 = os.path.join(self.log_folder, f"pingumil_dp_p1.csv")
+        test_pred_p1.to_csv(results_path_p1, index=False)
+        
+        results_path_p2 = os.path.join(self.log_folder, f"pingumil_dp_p2.csv")
+        test_pred_p2.to_csv(results_path_p2, index=False)
         
 if __name__ ==  "__main__":
     k = SSDeathPredBaseExperiment()

@@ -215,11 +215,11 @@ def get_data(model_name, df, data_columns, match_column, class_column):
     return X, y
 
 def run(model_name, add_cluster=False, num_clusters=5, base_clustering="kmeans", run_csf=True, parameters = None):
-    output_base_filename = f"hp2_{model_name}_sk10f_lr_csf" if run_csf else f"hp2_{model_name}_sk10f_lr"
+    output_base_filename = f"hp3_{model_name}_sk10f_lr_csf" if run_csf else f"hp3_{model_name}_sk10f_lr"
     print(f"Execution: {output_base_filename}")
     if add_cluster:
         print(f"Clustering: {base_clustering} - k={num_clusters}")
-        cluster_file = f"player_profiles_sswinpred_{base_clustering}k{num_clusters}.csv"
+        cluster_file = f"player_profiles_winpred/player_profiles_sswinpred_{base_clustering}k{num_clusters}.csv"
         cluster_df = pd.read_csv(cluster_file, index_col=0)
         cluster_df["graph"] = cluster_df["graph"].apply(lambda x : f"{x}.xml")
 
@@ -228,8 +228,8 @@ def run(model_name, add_cluster=False, num_clusters=5, base_clustering="kmeans",
     class_column = "class"
     non_data_columns = [match_column, timestamp_column, class_column]
 
-    train_df = pd.read_csv("dataset/SmokeSquadron/ss_hitprediction2/hitprediction2_dataset_5s_train.csv").drop(columns=["Unnamed: 0"])
-    test_df = pd.read_csv("dataset/SmokeSquadron/ss_hitprediction2/hitprediction2_dataset_5s_test.csv").drop(columns=["Unnamed: 0"])
+    train_df = pd.read_csv("dataset/SmokeSquadron/ss_hitprediction/hitprediction_dataset_5s_train.csv").drop(columns=["Unnamed: 0"])
+    test_df = pd.read_csv("dataset/SmokeSquadron/ss_hitprediction/hitprediction_dataset_5s_test.csv").drop(columns=["Unnamed: 0"])
     if add_cluster:
         train_df = train_df.merge(cluster_df, how="inner", left_on=['source','timestamp'], right_on=['graph','timestamp'])
         train_df = train_df.drop(columns=["graph"])
@@ -293,6 +293,6 @@ if __name__ == "__main__":
                 continue
             params = param_dict[model_name]
             run(model_name, add_cluster=False, parameters=params, run_csf=run_csf)
-            #run(model_name, add_cluster=True, num_clusters=5, base_clustering="kmeans", parameters=params, run_csf=run_csf)
-            #for i in [5, 10, 20]:
-            #    run(model_name, add_cluster=True, num_clusters=i, base_clustering="spectralg55", parameters=params, run_csf=run_csf)
+            run(model_name, add_cluster=True, num_clusters=5, base_clustering="kmeans", parameters=params, run_csf=run_csf)
+            for i in [5, 10, 20]:
+                run(model_name, add_cluster=True, num_clusters=i, base_clustering="spectralg55", parameters=params, run_csf=run_csf)
