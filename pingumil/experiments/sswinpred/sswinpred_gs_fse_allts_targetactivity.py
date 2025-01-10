@@ -28,8 +28,8 @@ group_name = "gs_macro_high_cls_epochs_allts_t8v1t1_valonf1"
 wandb_config = {
     "batch_size" : 1024,
     "lr": 1e-3,
-    "lr_clf" : 1e-4,
-    "weight_decay": 1e-3,
+    "lr_clf" : 1e-3,
+    "weight_decay": 1e-4,
     "weight_decay_clf": 1e-4,
     "gnn": "gs",
     "current_timestamp" : current_timestamp
@@ -45,7 +45,8 @@ experiment = SSWinPredBaseExperiment(
     epochs=1000,
     cls_epochs=1000,
     timestamp=time.time(),
-    patience=10,
+    model_config="configs/sshitpred_sagemodel_v4.json",
+    patience=100,
     wandb=wandb,
     override_data=False)
 print(experiment.output_file)

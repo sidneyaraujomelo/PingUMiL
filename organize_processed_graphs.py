@@ -3,11 +3,12 @@ from glob import glob
 import re
 import shutil
 
-input_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_wp_playeractivity/Raw Data"
-output_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_wp_playeractivity/preprocessed_graphs"
+input_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_hitprediction2/Raw Data"
+output_path = "/raid/home/smelo/PingUMiL-pytorch/dataset/SmokeSquadron/ss_hitprediction2/preprocessed_graphs"
+input_prefix = "hitpred"
 paths = glob(f"{input_path}/*")
 files = [os.path.basename(x) for x in paths]
-groups = [re.search(r"(winpred.*xml)", x)[0] for x in files]
+groups = [re.search(fr"({input_prefix}.*xml)", x)[0] for x in files]
 groups = list(set(groups))
 paths_dict = {}
 for k in groups:

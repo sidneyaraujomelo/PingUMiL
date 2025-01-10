@@ -1,0 +1,12 @@
+[
+    {
+        "model": "graphsage",
+        "in_channels" : 0,
+        "hidden_channels" : [128],
+        "out_channels": 64,
+        "dropout": 0.5
+    },
+    {
+        "model": "binary_classification"
+    }
+]
