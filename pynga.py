@@ -1,4 +1,4 @@
-from config.util import getEdgeSourceAndTargetIDs, getVertexByID, getTextFromNode, sumEdgeTypeDictionaries
+from config.util import getEdgeSourceAndTargetIDs, getVertexByID, get_text_from_node, sumEdgeTypeDictionaries
 from config.config import *
 import math
 import os
@@ -69,8 +69,8 @@ def getPingUMiLEdgeTypes(tree):
                 source_id, target_id = getEdgeSourceAndTargetIDs(edge_element)
                 source_vertex = getVertexByID(root,"vertex_{}".format(source_id))
                 target_vertex = getVertexByID(root,"vertex_{}".format(target_id))
-                target_label = getTextFromNode(target_vertex, "label")
-                source_label = getTextFromNode(source_vertex, "label")
+                target_label = get_text_from_node(target_vertex, "label")
+                source_label = get_text_from_node(source_vertex, "label")
 
                 edge_type = "{}->{}".format(target_label, source_label)
                 if edge_type not in dict_edge_types:

@@ -1,0 +1,38 @@
+{
+    "onlyOneFile": false,
+    "mergeGraphs": false,
+    "kFoldGenerated" : false,
+    "kFoldNumber" : 10,
+    "includeExtraEdges" : false,
+    "includeNegativeEdges" : false,
+    "leaveOneGraphOutOfTraining" : false,
+    "inputfile" : "output 08.xml",
+    "input_prefix" : "/raid/home/smelo/PingUMiL-pytorch/dataset/GPP/Raw Data/",
+    "inputfiles": [],
+    "ignorefiles": [],
+    "extraedgesfiles": [],
+    "negativeedgefiles": [],
+    "use_graph_name": true,
+    "output_prefix": "sshet_test",
+    "output_folder": "/raid/home/smelo/PingUMiL-pytorch/output/test/",
+    "node_split":
+    {
+        "train_ratio": 0.7,
+        "test_ratio": 0.2,
+        "val_ratio" : 0.1,
+        "train_dict" : { "test" : false, "val" : false },
+        "test_dict" : {"test": true, "val": false},
+        "val_dict" : {"test": false, "val": true}
+    },
+    "edge_split":
+    {
+        "train_ratio": 0.7,
+        "test_ratio": 0.2,
+        "val_ratio" : 0.1,
+        "train_dict" : {"test_removed": false, "train_removed": false},
+        "test_dict" : {"test_removed": true, "train_removed": true},
+        "val_dict" : {"test_removed": false, "train_removed": true}
+    },
+    "directed" : false,
+    "attrib_written_in_node": true
+}
