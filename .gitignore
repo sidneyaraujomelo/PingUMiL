@@ -12,3 +12,4 @@ hitpredictioneval/*/*/.csv
 hitpredictioneval/*.csv
 player_profiles_winpred/*.csv
 *.png
+deathpredictioneval/*.csv
